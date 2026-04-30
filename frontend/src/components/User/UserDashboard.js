@@ -1,0 +1,273 @@
+import React, { useState, useEffect, useRef, useCallback } from 'react';
+import axios from 'axios';
+import API_BASE_URL from '../../apiConfig';
+import { useNavigate } from 'react-router-dom';
+import { ToastContainer, toast } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
+
+// Modular Components
+import Layout from '../Common/Layout';
+import { IconDashboard, IconWebcam, IconHistory } from '../Common/Icons';
+import HomeTab from './Tabs/HomeTab';
+import AbsenTab from './Tabs/AbsenTab';
+import HistoryTab from './Tabs/HistoryTab';
+
+// Theme
+import '../../theme/variables.css';
+
+function UserDashboard() {
+    const [username, setUsername] = useState('');
+    const [activeTab, setActiveTab] = useState('welcome');
+    const [history, setHistory] = useState([]);
+    const [attendanceStatus, setAttendanceStatus] = useState({ masuk: false, pulang: false });
+    const [todaySchedule, setTodaySchedule] = useState(null);
+    const [scanStatus, setScanStatus] = useState('Siap untuk Scan');
+    const [recognizedUser, setRecognizedUser] = useState(null);
+    const [isSubmitting, setIsSubmitting] = useState(false);
+
+    // Refs for camera and drawing overlay
+    const webcamRef = useRef(null);
+    const canvasRef = useRef(null);
+    
+    const navigate = useNavigate();
+
+    const getCookie = (name) => {
+        const value = `; ${document.cookie}`;
+        const parts = value.split(`; ${name}=`);
+        if (parts.length === 2) return parts.pop().split(';').shift();
+    };
+
+    const fetchHistory = useCallback(async () => {
+        const userId = getCookie('user_id');
+        if (!userId) return;
+        try {
+            const response = await axios.get(`${API_BASE_URL}/attendance_history`, {
+                params: { user_id: userId }
+            });
+            const logs = response.data.history;
+            setHistory(logs);
+            
+            const now = new Date();
+            const localDate = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+            
+            // Check specifically for Masuk vs Pulang today
+            const attendedToday = logs.filter(h => h.tanggal === localDate);
+            setAttendanceStatus({
+                masuk: attendedToday.some(h => h.jenis === 'masuk'),
+                pulang: attendedToday.some(h => h.jenis === 'pulang')
+            });
+        } catch (error) {
+            console.error('Error fetching history:', error);
+        }
+    }, []);
+
+    useEffect(() => {
+        const fetchData = async () => {
+            const userId = getCookie('user_id');
+            if (!userId) { navigate('/signin'); return; }
+            try {
+                const response = await axios.get(`${API_BASE_URL}/greeting`, { params: { user_id: userId } });
+                setUsername(response.data.username);
+                if (response.data.schedule) {
+                    setTodaySchedule(response.data.schedule);
+                }
+                fetchHistory();
+            } catch (error) { 
+                console.error("Fetch Data Error:", error);
+                navigate('/signin'); 
+            }
+        };
+        fetchData();
+    }, [navigate, fetchHistory]);
+
+    // VGA STANDARD: Force 640x480 buffer and handle manual mirroring
+    const drawBoxes = useCallback((faces) => {
+        const canvas = canvasRef.current;
+        const video = webcamRef.current?.video;
+        if (!canvas || !video) return;
+
+        // Force VGA Standard buffer size
+        const sensorW = 640;
+        const sensorH = 480;
+
+        canvas.width = sensorW;
+        canvas.height = sensorH;
+
+        const ctx = canvas.getContext('2d');
+        ctx.clearRect(0, 0, sensorW, sensorH);
+
+        faces.forEach(face => {
+            const [top, right, bottom, left] = face.box;
+            const name = face.name;
+            const confidence = face.confidence;
+
+            // MANUAL MIRROR: 
+            // In a mirrored view, sensor left edge -> visual right edge.
+            // sensor right edge -> visual left edge.
+            // Formula: visualX = bufferW - sensorRight
+            const x = sensorW - right; 
+            const y = top;
+            const w = right - left;
+            const h = bottom - top;
+
+            ctx.strokeStyle = name === 'Unknown' ? '#ef4444' : '#f9bc2f';
+            ctx.lineWidth = 3;
+            ctx.strokeRect(x, y, w, h);
+
+            // Label (Text is normal because canvas is NOT CSS-mirrored)
+            ctx.fillStyle = name === 'Unknown' ? '#ef4444' : '#f9bc2f';
+            ctx.font = 'bold 16px Inter, sans-serif'; 
+            const confVal = typeof confidence === 'number' ? confidence.toFixed(1) : '?';
+            const text = confidence ? `${name} (${confVal}%)` : name;
+            const textWidth = ctx.measureText(text).width;
+            
+            const labelY = y > 24 ? y - 24 : y;
+            ctx.fillRect(x, labelY, textWidth + 12, 22);
+            ctx.fillStyle = '#0b1a2a';
+            ctx.fillText(text, x + 6, labelY + 16);
+        });
+    }, []);
+
+    const processFrame = useCallback(async () => {
+        if (activeTab !== 'absen' || !webcamRef.current || attendanceStatus === 'Sudah Absen') return;
+        
+        const video = webcamRef.current.video;
+        if (!video || video.readyState < 2) return;
+
+        const imageSrc = webcamRef.current.getScreenshot();
+        if (!imageSrc) return;
+
+        try {
+            const response = await axios.post(`${API_BASE_URL}/detect_live`, { image: imageSrc });
+            if (response.data.faces) {
+                // Update boxes on canvas
+                drawBoxes(response.data.faces);
+
+                if (response.data.recognized) {
+                    const { user } = response.data;
+                    if (user.username.toLowerCase() === username.toLowerCase()) {
+                        setRecognizedUser(user);
+                        setScanStatus(`Wajah Terdeteksi: ${user.confidence.toFixed(1)}%`);
+                    }
+                } else {
+                    setRecognizedUser(null);
+                    setScanStatus('Mencari wajah...');
+                }
+            } else {
+                // Clear canvas if no faces
+                const canvas = canvasRef.current;
+                if (canvas) canvas.getContext('2d').clearRect(0, 0, canvas.width, canvas.height);
+            }
+        } catch (error) {
+            console.error('Detection error:', error);
+        }
+    }, [activeTab, username, attendanceStatus, drawBoxes, fetchHistory]);
+
+    useEffect(() => {
+        let timerId;
+        const loop = async () => {
+            if (activeTab === 'absen') {
+                await processFrame();
+                timerId = setTimeout(loop, 400); // 400ms delay AFTER processing
+            }
+        };
+        
+        if (activeTab === 'absen') {
+            loop();
+        }
+        
+        return () => {
+            if (timerId) clearTimeout(timerId);
+            const canvas = canvasRef.current;
+            if (canvas) canvas.getContext('2d').clearRect(0, 0, canvas.width, canvas.height);
+        };
+    }, [activeTab, processFrame]);
+
+    const handleLogout = () => {
+        document.cookie = 'user_id=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
+        document.cookie = 'username=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
+        document.cookie = 'role=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
+        navigate('/signin');
+    };
+
+    const handleSubmitAttendance = async (jenis = 'masuk') => {
+        if (!recognizedUser || isSubmitting) return;
+        setIsSubmitting(true);
+        try {
+            const response = await axios.post(`${API_BASE_URL}/submit_attendance`, {
+                employee_id: recognizedUser.employee_id,
+                confidence: recognizedUser.confidence,
+                jenis: jenis
+            });
+            toast.success(response.data.message);
+            
+            // Optimistic update of status based on what was submitted
+            setAttendanceStatus(prev => ({
+                ...prev,
+                [jenis]: true
+            }));
+
+            setRecognizedUser(null);
+            fetchHistory();
+            setTimeout(() => setActiveTab('welcome'), 2000);
+        } catch (error) {
+            toast.error(error.response?.data?.message || 'Gagal menyimpan absensi');
+        } finally {
+            setIsSubmitting(false);
+        }
+    };
+
+    const handleResetScan = () => {
+        setRecognizedUser(null);
+        setScanStatus('Siap untuk Scan');
+    };
+
+    const navItems = [
+        { id: 'welcome', label: 'Dashboard', icon: <IconDashboard /> },
+        { id: 'absen', label: 'Absensi Wajah', icon: <IconWebcam /> },
+        { id: 'history', label: 'Riwayat Absensi', icon: <IconHistory /> }
+    ];
+
+    return (
+        <Layout
+            activeTab={activeTab}
+            setActiveTab={setActiveTab}
+            navItems={navItems}
+            portalTitle="DASHBOARD KARYAWAN"
+            username={username}
+            userRole="Karyawan"
+            onLogout={handleLogout}
+            brandTitle="E-ABSENSI"
+            brandIcon="💎"
+        >
+            {activeTab === 'welcome' && (
+                <HomeTab 
+                    username={username} 
+                    attendanceStatus={attendanceStatus} 
+                    history={history}
+                    onGoToAbsen={() => setActiveTab('absen')}
+                />
+            )}
+            {activeTab === 'absen' && (
+                <AbsenTab 
+                    webcamRef={webcamRef} 
+                    canvasRef={canvasRef} 
+                    scanStatus={scanStatus}
+                    attendanceStatus={attendanceStatus}
+                    todaySchedule={todaySchedule}
+                    recognizedUser={recognizedUser}
+                    isSubmitting={isSubmitting}
+                    onSubmit={handleSubmitAttendance}
+                    onReset={handleResetScan}
+                />
+            )}
+            {activeTab === 'history' && (
+                <HistoryTab history={history} />
+            )}
+            
+            <ToastContainer position="top-right" theme="colored" autoClose={3000} />
+        </Layout>
+    );
+}
+
+export default UserDashboard;

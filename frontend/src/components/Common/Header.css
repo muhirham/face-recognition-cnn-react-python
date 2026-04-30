@@ -1,0 +1,110 @@
+.premium-header-container {
+    height: var(--header-height);
+    background-color: var(--navy-primary);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 40px;
+    color: white;
+    z-index: 900;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+.header-left-section {
+    display: flex;
+    align-items: center;
+    gap: 24px;
+}
+
+.mobile-drawer-trigger {
+    display: none;
+    background: transparent;
+    border: none;
+    color: white;
+    cursor: pointer;
+    padding: 8px;
+    border-radius: 8px;
+    transition: var(--transition-smooth);
+}
+
+.mobile-drawer-trigger:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+}
+
+.branding-node {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+}
+
+.node-logo {
+    color: var(--gold-accent);
+    font-weight: 950;
+    font-size: 26px;
+    letter-spacing: -1.5px;
+}
+
+.node-divider {
+    width: 2px;
+    height: 30px;
+    background-color: rgba(255, 255, 255, 0.15);
+}
+
+.node-title {
+    font-size: 16px;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: rgba(255, 255, 255, 0.9);
+}
+
+.header-right-section {
+    display: flex;
+    align-items: center;
+    gap: 32px;
+}
+
+.user-greeting {
+    font-size: 14px;
+    color: rgba(255, 255, 255, 0.7);
+}
+
+.user-greeting strong {
+    color: white;
+    font-weight: 700;
+}
+
+.role-sub {
+    font-size: 12px;
+    opacity: 0.5;
+    margin-left: 5px;
+}
+
+.header-exit-btn {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: transparent;
+    border: 1.5px solid var(--gold-accent);
+    color: var(--gold-accent);
+    padding: 9px 20px;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 800;
+    cursor: pointer;
+    transition: var(--transition-smooth);
+}
+
+.header-exit-btn:hover {
+    background-color: var(--gold-accent);
+    color: var(--navy-primary);
+    box-shadow: 0 5px 15px rgba(249, 188, 47, 0.2);
+}
+
+@media (max-width: 1024px) {
+    .premium-header-container { height: 60px; padding: 0 20px; }
+    .mobile-drawer-trigger { display: block; }
+    .node-divider, .user-greeting, .node-title { display: none; }
+    .header-exit-btn span { display: none; }
+    .header-exit-btn { padding: 10px; border-radius: 50%; }
+}

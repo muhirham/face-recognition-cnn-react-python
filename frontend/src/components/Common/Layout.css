@@ -1,0 +1,49 @@
+.layout-wrapper {
+    display: flex;
+    height: 100vh;
+    width: 100%;
+    overflow: hidden;
+}
+
+.layout-main-content {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-width: 0; /* Ensure flex child can shrink */
+    background-color: var(--bg-main);
+}
+
+.layout-view-area {
+    flex: 1;
+    padding: 32px;
+    overflow-y: auto;
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+}
+
+/* Scrollbar Styling for View Area */
+.layout-view-area::-webkit-scrollbar {
+    width: 6px;
+}
+
+.layout-view-area::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.layout-view-area::-webkit-scrollbar-thumb {
+    background: rgba(0, 0, 0, 0.1);
+    border-radius: 10px;
+}
+
+.layout-view-area::-webkit-scrollbar-thumb:hover {
+    background: rgba(0, 0, 0, 0.2);
+}
+
+@media (max-width: 768px) {
+    .layout-view-area {
+        padding: 16px;
+        gap: 16px;
+    }
+}

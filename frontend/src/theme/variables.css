@@ -1,0 +1,48 @@
+:root {
+    /* Primary Palette - UT Navy & UT Gold (Metallic) */
+    --navy-primary: #0b1a2a;
+    --navy-dark: #050d16;
+    --navy-light: #162638;
+    
+    --gold-accent: #f9bc2f;
+    --gold-hover: #d4a017;
+    
+    /* Neutral Palette */
+    --bg-main: #f3f7fa;
+    --white: #ffffff;
+    --slate-text: #1e293b;
+    --slate-muted: #64748b;
+    
+    /* Semantic Colors */
+    --success: #10b981;
+    --error: #ef4444;
+    --warning: #f59e0b;
+    
+    /* Layout Constants */
+    --sidebar-width: 280px;
+    --header-height: 80px;
+    
+    /* Effects */
+    --card-shadow: 0 15px 35px -5px rgba(0, 0, 0, 0.05), 0 10px 15px -10px rgba(0, 0, 0, 0.05);
+    --border-radius: 12px;
+    --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    background-color: var(--bg-main);
+    color: var(--slate-text);
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    line-height: 1.5;
+}
+
+/* Fix CSS Compatibility Warning */
+.standard-gradient-text {
+    background-clip: text;
+    -webkit-background-clip: text;
+}
