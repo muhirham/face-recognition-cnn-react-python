@@ -1,9 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
 import Webcam from 'react-webcam';
 
-function AbsenTab({ webcamRef, canvasRef, scanStatus, attendanceStatus, todaySchedule, recognizedUser, isSubmitting, onSubmit, onReset }) {
+function AbsenTab({ webcamRef, canvasRef, scanStatus, attendanceStatus, todaySchedule, recognizedUser, isSubmitting, onSubmit, onReset, minConfidence }) {
     const [absensiType, setAbsensiType] = useState('masuk');
-    const canSubmit = recognizedUser && recognizedUser.confidence >= 85;
+    const canSubmit = recognizedUser && recognizedUser.confidence >= (minConfidence || 85);
 
     // Smart logic to determine if current tab is locked
     const isModeDone = absensiType === 'masuk' ? attendanceStatus.masuk : attendanceStatus.pulang;
@@ -146,11 +146,10 @@ function AbsenTab({ webcamRef, canvasRef, scanStatus, attendanceStatus, todaySch
                                         }}
                                     />
                                 </div>
-                                {/* VGA STANDARD: Canvas outside mirror wrapper to keep text readable.
-                                    We handle mirroring manually in JS drawing logic. */}
                                 <canvas ref={canvasRef} className="scan-canvas-overlay" />
                                 <div className="kiosk-frame"></div>
                                 <div className="scanner-line"></div>
+                                <div className="live-status-badge">{scanStatus}</div>
                                 </>
                             )}
                         </div>
@@ -160,7 +159,7 @@ function AbsenTab({ webcamRef, canvasRef, scanStatus, attendanceStatus, todaySch
                     {!isLocked && !recognizedUser && (
                         <div className="absen-actions">
                             <button className="btn-secondary" onClick={() => window.location.reload()}>Mulai Kamera</button>
-                            <button className="btn-primary-imp">Scan Wajah</button>
+                            <button className="btn-primary-imp" onClick={onReset}>Scan Wajah</button>
                         </div>
                     )}
 
@@ -187,7 +186,12 @@ function AbsenTab({ webcamRef, canvasRef, scanStatus, attendanceStatus, todaySch
                                 <button className="btn-reset-light" onClick={onReset}>Scan Ulang</button>
                                 <button 
                                     className={`btn-submit-main ${canSubmit && !isSubmitting ? 'active' : 'disabled'}`}
-                                    onClick={() => canSubmit && !isSubmitting && onSubmit(absensiType)}
+                                    onClick={() => {
+                                        if (canSubmit && !isSubmitting) {
+                                            const image = webcamRef.current.getScreenshot();
+                                            onSubmit(absensiType, image);
+                                        }
+                                    }}
                                     disabled={!canSubmit || isSubmitting}
                                 >
                                     {isSubmitting ? 'Menyimpan...' : `Simpan Absensi ${absensiType.toUpperCase()}`}
@@ -377,6 +381,15 @@ function AbsenTab({ webcamRef, canvasRef, scanStatus, attendanceStatus, todaySch
                 .btn-submit-main.active { background: #10b981; color: white; box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3); }
                 .btn-submit-main.active:hover { transform: translateY(-2px); }
                 .btn-submit-main.disabled { background: #94a3b8; color: #f1f5f9; cursor: not-allowed; }
+
+                .live-status-badge {
+                    position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%);
+                    background: rgba(11, 26, 42, 0.8); backdrop-filter: blur(4px);
+                    color: white; padding: 8px 20px; border-radius: 100px;
+                    font-size: 12px; font-weight: 800; z-index: 10;
+                    border: 1px solid rgba(255,255,255,0.1);
+                    pointer-events: none; white-space: nowrap;
+                }
 
                 @media (max-width: 650px) {
                     .static-absen-container {

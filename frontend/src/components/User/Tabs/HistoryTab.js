@@ -90,6 +90,8 @@ function HistoryTab({ history }) {
                 }
                 .status-badge.tepat_waktu { background: #dcfce7; color: #059669; }
                 .status-badge.terlambat { background: #fee2e2; color: #dc2626; }
+                .status-badge.pulang_awal { background: #ffedd5; color: #d97706; }
+                .status-badge.lembur { background: #dbeafe; color: #2563eb; }
                 
                 .acc-val { font-weight: 800; }
                 .acc-val.high { color: #059669; }

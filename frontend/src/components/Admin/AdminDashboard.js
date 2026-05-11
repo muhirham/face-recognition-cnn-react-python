@@ -1,119 +1,78 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
+import API_BASE_URL from '../../apiConfig';
 import { useNavigate } from 'react-router-dom';
 import { ToastContainer, toast } from 'react-toastify';
-import API_BASE_URL from '../../apiConfig';
-import 'react-toastify/dist/ReactToastify.css';
-
-// Modular Components
 import Layout from '../Common/Layout';
 import { 
-    IconDashboard, IconUsers, IconHistory, 
-    IconReport, IconSettings, IconDatabase, IconWebcam 
+    IconDashboard, 
+    IconWebcam, 
+    IconHistory, 
+    IconUsers, 
+    IconLogout, 
+    IconReport, 
+    IconSettings, 
+    IconDatabase 
 } from '../Common/Icons';
+
+// Tabs
 import OverviewTab from './Tabs/OverviewTab';
 import EmployeeTab from './Tabs/EmployeeTab';
-import ReportTab from './Tabs/ReportTab';
+import MasterDataTab from './Tabs/MasterDataTab';
 import RegistrationTab from './Tabs/RegistrationTab';
 import ScheduleTab from './Tabs/ScheduleTab';
+import UserTab from './Tabs/UserTab';
 import AttendanceLogTab from './Tabs/AttendanceLogTab';
 import SettingsTab from './Tabs/SettingsTab';
-import EnrollmentModal from './EnrollmentModal';
-import EditEmployeeModal from './EditEmployeeModal';
-
-// Theme
-import '../../theme/variables.css';
 
 function AdminDashboard() {
-    const [activeTab, setActiveTab] = useState('overview');
-    const [stats, setStats] = useState({ total_employees: 0, present_today: 0, attendance_rate: 0 });
-    const [employees, setEmployees] = useState([]);
-    const [history, setHistory] = useState([]);
-    const [isLoading, setIsLoading] = useState(false);
-    const [showEnrollModal, setShowEnrollModal] = useState(false);
-    const [showEditModal, setShowEditModal] = useState(false);
-    const [selectedEmployee, setSelectedEmployee] = useState(null);
+    const [activeTab, setActiveTab] = useState('dashboard');
+    const [username, setUsername] = useState('Admin');
+    const [stats, setStats] = useState(null);
     const navigate = useNavigate();
 
-    const getCookie = (name) => {
-        const value = `; ${document.cookie}`;
-        const parts = value.split(`; ${name}=`);
-        if (parts.length === 2) return parts.pop().split(';').shift();
-    };
-
-    const checkAdmin = () => {
-        const role = getCookie('role');
-        if (role !== 'admin') { navigate('/signin'); }
-    };
-
-    const fetchData = async () => {
-        setIsLoading(true);
-        try {
-            const statsRes = await axios.get(`${API_BASE_URL}/admin/stats`);
-            setStats(statsRes.data);
-
-            const empRes = await axios.get(`${API_BASE_URL}/admin/employees`);
-            setEmployees(empRes.data.employees);
-
-            const histRes = await axios.get(`${API_BASE_URL}/admin/all_history`);
-            setHistory(histRes.data.history);
-        } catch (error) {
-            toast.error("Gagal mengambil data dari server");
-        } finally {
-            setIsLoading(false);
-        }
-    };
-
     useEffect(() => {
-        checkAdmin();
-        fetchData();
-    }, []);
-
-    const handleDeleteEmployee = async (userId) => {
-        if (window.confirm("Hapus karyawan ini?")) {
+        const userId = document.cookie.split('; ').find(row => row.startsWith('user_id='))?.split('=')[1];
+        if (!userId) { navigate('/signin'); return; }
+        
+        // Fetch Admin Name
+        const fetchAdmin = async () => {
             try {
-                await axios.delete(`${API_BASE_URL}/admin/employees/${userId}`);
-                toast.success("Karyawan dihapus");
-                fetchData();
-            } catch (error) { toast.error("Gagal menghapus"); }
-        }
-    };
+                const res = await axios.get(`${API_BASE_URL}/greeting`, { params: { user_id: userId } });
+                if (res.data.nama) setUsername(res.data.nama);
+            } catch (err) { console.error(err); }
+        };
 
-    const handleResetFace = async (karyawanId) => {
-        if (window.confirm("Reset data wajah? Karyawan harus mendaftar ulang wajah.")) {
+        const fetchStats = async () => {
             try {
-                await axios.post(`${API_BASE_URL}/admin/reset_face`, { karyawan_id: karyawanId });
-                toast.success("Data wajah berhasil di-reset");
-            } catch (error) { toast.error("Gagal reset wajah"); }
-        }
-    };
+                const res = await axios.get(`${API_BASE_URL}/admin/stats`);
+                setStats(res.data);
+            } catch (err) { console.error(err); }
+        };
 
-    const exportToCSV = () => {
-        const headers = ["Nama", "Tanggal", "Waktu", "Jenis", "Status"];
-        const rows = history.map(h => [h.nama, h.tanggal, h.waktu, h.jenis, h.status]);
-        let csvContent = "data:text/csv;charset=utf-8," + headers.join(",") + "\n" + rows.map(e => e.join(",")).join("\n");
-        const encodedUri = encodeURI(csvContent);
-        const link = document.createElement("a");
-        link.setAttribute("href", encodedUri);
-        link.setAttribute("download", `Laporan_Absensi_${new Date().toLocaleDateString()}.csv`);
-        document.body.appendChild(link);
-        link.click();
-    };
+        fetchAdmin();
+        fetchStats();
+        
+        // Refresh stats every 30 seconds
+        const interval = setInterval(fetchStats, 30000);
+        return () => clearInterval(interval);
+    }, [navigate]);
 
     const handleLogout = () => {
-        document.cookie = "user_id=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
-        document.cookie = "role=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
+        document.cookie = 'user_id=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
+        document.cookie = 'role=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
         navigate('/signin');
     };
 
     const navItems = [
-        { id: 'overview', label: 'Dashboard', icon: <IconDashboard /> },
-        { id: 'reports', label: 'Laporan Absensi', icon: <IconReport /> },
-        { id: 'employees', label: 'Data Karyawan', icon: <IconUsers /> },
+        { id: 'dashboard', label: 'Dashboard', icon: <IconDashboard /> },
+        { id: 'history', label: 'Log Absensi', icon: <IconHistory /> },
+        { id: 'employees', label: 'Master Karyawan', icon: <IconUsers /> },
+        { id: 'master_data', label: 'Master Dept & Jabatan', icon: <IconDatabase /> },
+        { id: 'schedule', label: 'Master Shift Kerja', icon: <IconDatabase /> },
+        { id: 'users', label: 'Master Administrator', icon: <IconUsers /> },
         { id: 'registration', label: 'Pendaftaran Wajah', icon: <IconWebcam /> },
-        { id: 'schedule', label: 'Jadwal Kerja', icon: <IconHistory /> },
-        { id: 'attendance_data', label: 'Data Absensi', icon: <IconDatabase /> },
-        { id: 'settings', label: 'Pengaturan', icon: <IconSettings /> }
+        { id: 'settings', label: 'Pengaturan Sistem', icon: <IconSettings /> },
     ];
 
     return (
@@ -121,66 +80,23 @@ function AdminDashboard() {
             activeTab={activeTab}
             setActiveTab={setActiveTab}
             navItems={navItems}
-            portalTitle="Sistem Absensi Otomatis Berbasis Pengenalan Wajah"
-            username="Administrator"
-            userRole="Admin"
+            portalTitle="ADMINISTRATOR PANEL"
+            username={username}
+            userRole="Super Admin"
             onLogout={handleLogout}
-            brandTitle="PT INTERTEL"
-            brandIcon="IMP"
+            brandTitle="IMP"
+            brandIcon="💎"
         >
-            {isLoading ? (
-                <div className="loading-container">Memuat data...</div>
-            ) : (
-                <>
-                    {activeTab === 'overview' && <OverviewTab stats={stats} />}
-                    {activeTab === 'employees' && (
-                        <EmployeeTab 
-                            employees={employees} 
-                            onAdd={() => setShowEnrollModal(true)} 
-                            onDelete={handleDeleteEmployee}
-                            onResetFace={handleResetFace}
-                            onEdit={(emp) => {
-                                setSelectedEmployee(emp);
-                                setShowEditModal(true);
-                            }}
-                        />
-                    )}
-                    {activeTab === 'reports' && <ReportTab />}
-                    {activeTab === 'attendance_data' && <AttendanceLogTab history={history} />}
-                    {activeTab === 'settings' && <SettingsTab />}
-                    {activeTab === 'registration' && (
-                        <RegistrationTab 
-                            employees={employees} 
-                            onRefresh={fetchData} 
-                        />
-                    )}
-                    {activeTab === 'schedule' && (
-                        <ScheduleTab employees={employees} />
-                    )}
-                </>
-            )}
-            
-            <EnrollmentModal 
-                isOpen={showEnrollModal} 
-                onClose={() => setShowEnrollModal(false)}
-                onSuccess={() => {
-                    toast.success("Karyawan baru berhasil didaftarkan!");
-                    fetchData();
-                }}
-            />
+            {activeTab === 'dashboard' && <OverviewTab stats={stats} />}
+            {activeTab === 'history' && <AttendanceLogTab />}
+            {activeTab === 'employees' && <EmployeeTab />}
+            {activeTab === 'master_data' && <MasterDataTab />}
+            {activeTab === 'schedule' && <ScheduleTab />}
+            {activeTab === 'users' && <UserTab />}
+            {activeTab === 'registration' && <RegistrationTab />}
+            {activeTab === 'settings' && <SettingsTab />}
 
-            <EditEmployeeModal 
-                isOpen={showEditModal}
-                employee={selectedEmployee}
-                onClose={() => setShowEditModal(false)}
-                onSuccess={() => fetchData()}
-            />
-            
             <ToastContainer position="top-right" theme="colored" autoClose={3000} />
-
-            <style>{`
-                .loading-container { display: flex; align-items: center; justify-content: center; height: 100%; font-weight: 700; color: var(--navy-primary); }
-            `}</style>
         </Layout>
     );
 }

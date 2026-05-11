@@ -13,11 +13,13 @@ function OverviewTab({ stats }) {
         };
     }, []);
 
+    if (!stats) return <div style={{padding: '40px', fontWeight: '800'}}>Memuat Data Statistik...</div>;
+
     const notifications = stats.notifications || [];
     const recentHistory = stats.recent_history || [];
     const weeklyStats = stats.weekly_stats || [
-        { label: '01', value: 0 }, { label: '10', value: 0 }, { label: '20', value: 0 },
-        { label: '100', value: 0 }, { label: '50', value: 0 }, { label: '200', value: 0 }, { label: '100', value: 0 }
+        { label: 'Sen', value: 0 }, { label: 'Sel', value: 0 }, { label: 'Rab', value: 0 },
+        { label: 'Kam', value: 0 }, { label: 'Jum', value: 0 }, { label: 'Sab', value: 0 }, { label: 'Min', value: 0 }
     ];
 
     // Find max value for chart scaling

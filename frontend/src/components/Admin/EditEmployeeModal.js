@@ -8,10 +8,23 @@ function EditEmployeeModal({ isOpen, onClose, employee, onSuccess }) {
         username: '',
         email: '',
         role: 'karyawan',
-        jabatan: '',
-        departemen: ''
+        jabatan_id: '',
+        dept_id: ''
     });
+    const [masterData, setMasterData] = useState({ departemens: [], jabatans: [] });
     const [isSubmitting, setIsSubmitting] = useState(false);
+
+    useEffect(() => {
+        const fetchMaster = async () => {
+            try {
+                const res = await axios.get(`${API_BASE_URL}/admin/master_data`);
+                setMasterData(res.data);
+            } catch (err) {
+                console.error("Gagal ambil master data", err);
+            }
+        };
+        if (isOpen) fetchMaster();
+    }, [isOpen]);
 
     useEffect(() => {
         if (employee) {
@@ -19,8 +32,8 @@ function EditEmployeeModal({ isOpen, onClose, employee, onSuccess }) {
                 username: employee.username || '',
                 email: employee.email || '',
                 role: employee.role || 'karyawan',
-                jabatan: employee.jabatan || '',
-                departemen: employee.departemen || ''
+                jabatan_id: employee.jabatan_id || '',
+                dept_id: employee.dept_id || ''
             });
         }
     }, [employee]);
@@ -71,21 +84,30 @@ function EditEmployeeModal({ isOpen, onClose, employee, onSuccess }) {
                             />
                         </div>
                         <div className="input-group">
-                            <label>Jabatan</label>
-                            <input 
-                                type="text" 
-                                value={formData.jabatan}
-                                onChange={(e) => setFormData({...formData, jabatan: e.target.value})}
-                            />
+                            <label>Departemen</label>
+                            <select 
+                                value={formData.dept_id}
+                                onChange={(e) => setFormData({...formData, dept_id: e.target.value})}
+                                required
+                            >
+                                <option value="">-- Pilih Departemen --</option>
+                                {masterData.departemens.map(d => (
+                                    <option key={d.id} value={d.id}>{d.nama_dept}</option>
+                                ))}
+                            </select>
                         </div>
                         <div className="input-group">
-                            <label>Departemen</label>
-                            <input 
-                                type="text" 
-                                value={formData.departemen}
-                                onChange={(e) => setFormData({...formData, departemen: e.target.value})}
-                                placeholder="Contoh: IT, HR, Proc"
-                            />
+                            <label>Jabatan</label>
+                            <select 
+                                value={formData.jabatan_id}
+                                onChange={(e) => setFormData({...formData, jabatan_id: e.target.value})}
+                                required
+                            >
+                                <option value="">-- Pilih Jabatan --</option>
+                                {masterData.jabatans.map(j => (
+                                    <option key={j.id} value={j.id}>{j.nama_jabatan}</option>
+                                ))}
+                            </select>
                         </div>
                         <div className="input-group full-width">
                             <label>Role Akses</label>
@@ -134,7 +156,7 @@ function EditEmployeeModal({ isOpen, onClose, employee, onSuccess }) {
                     width: 100%; padding: 12px 16px; border-radius: 12px; border: 1.5px solid #e2e8f0;
                     font-size: 14px; font-weight: 600; color: var(--navy-primary); transition: 0.2s;
                 }
-                .input-group input:focus { border-color: var(--gold-accent); outline: none; box-shadow: 0 0 0 4px rgba(249, 188, 47, 0.1); }
+                .input-group input:focus, .input-group select:focus { border-color: var(--gold-accent); outline: none; box-shadow: 0 0 0 4px rgba(249, 188, 47, 0.1); }
 
                 .modal-footer { margin-top: 30px; display: flex; gap: 12px; justify-content: flex-end; }
                 .btn-secondary { background: #f1f5f9; color: var(--slate-muted); border: none; padding: 12px 24px; border-radius: 12px; font-weight: 700; cursor: pointer; }

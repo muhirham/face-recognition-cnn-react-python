@@ -1,6 +1,36 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
+import axios from 'axios';
+import API_BASE_URL from '../../../apiConfig';
+import { toast } from 'react-toastify';
 
 function SettingsTab() {
+    const [settings, setSettings] = useState({ min_confidence: 85 });
+    const [isLoading, setIsLoading] = useState(false);
+
+    useEffect(() => {
+        const fetchSettings = async () => {
+            try {
+                const res = await axios.get(`${API_BASE_URL}/admin/settings`);
+                setSettings(res.data);
+            } catch (err) {
+                console.error("Gagal load settings", err);
+            }
+        };
+        fetchSettings();
+    }, []);
+
+    const handleSave = async () => {
+        setIsLoading(true);
+        try {
+            await axios.post(`${API_BASE_URL}/admin/settings`, settings);
+            toast.success("Pengaturan berhasil disimpan!");
+        } catch (err) {
+            toast.error("Gagal menyimpan pengaturan.");
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
     return (
         <div className="settings-view animate-fade-in">
             <div className="settings-header">
@@ -42,7 +72,15 @@ function SettingsTab() {
                                 <strong>Ambang Batas Kepercayaan (Face Match)</strong>
                                 <p>Minimum skor akurasi wajah untuk dinyatakan hadir.</p>
                             </div>
-                            <input type="number" defaultValue={75} className="small-input" />
+                            <div className="input-with-label">
+                                <input 
+                                    type="number" 
+                                    value={settings.min_confidence} 
+                                    onChange={(e) => setSettings({...settings, min_confidence: e.target.value})}
+                                    className="small-input" 
+                                />
+                                <span className="perc-unit">%</span>
+                            </div>
                         </div>
                         <div className="config-item">
                             <div className="config-text">
@@ -55,7 +93,9 @@ function SettingsTab() {
                             </label>
                         </div>
                     </div>
-                    <button className="btn-save-settings">Simpan Perubahan</button>
+                    <button className="btn-save-settings" onClick={handleSave} disabled={isLoading}>
+                        {isLoading ? 'Menyimpan...' : 'Simpan Perubahan'}
+                    </button>
                 </div>
             </div>
 
@@ -94,7 +134,9 @@ function SettingsTab() {
                 .config-text strong { display: block; font-size: 14px; color: var(--navy-primary); }
                 .config-text p { font-size: 12px; color: var(--slate-muted); margin-top: 4px; }
                 
-                .small-input { width: 80px; padding: 10px; border: 1.5px solid #e2e8f0; border-radius: 10px; font-weight: 800; text-align: center; }
+                .input-with-label { display: flex; align-items: center; gap: 8px; }
+                .small-input { width: 70px; padding: 10px; border: 1.5px solid #e2e8f0; border-radius: 10px; font-weight: 800; text-align: center; }
+                .perc-unit { font-weight: 800; color: var(--navy-primary); }
 
                 .btn-save-settings {
                     width: 100%; padding: 14px; background: var(--navy-primary); color: white;

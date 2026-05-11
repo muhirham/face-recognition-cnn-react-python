@@ -24,6 +24,7 @@ function UserDashboard() {
     const [scanStatus, setScanStatus] = useState('Siap untuk Scan');
     const [recognizedUser, setRecognizedUser] = useState(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [minConfidence, setMinConfidence] = useState(85); // Global threshold
 
     // Refs for camera and drawing overlay
     const webcamRef = useRef(null);
@@ -68,6 +69,9 @@ function UserDashboard() {
             try {
                 const response = await axios.get(`${API_BASE_URL}/greeting`, { params: { user_id: userId } });
                 setUsername(response.data.username);
+                if (response.data.min_confidence) {
+                    setMinConfidence(response.data.min_confidence);
+                }
                 if (response.data.schedule) {
                     setTodaySchedule(response.data.schedule);
                 }
@@ -102,9 +106,6 @@ function UserDashboard() {
             const confidence = face.confidence;
 
             // MANUAL MIRROR: 
-            // In a mirrored view, sensor left edge -> visual right edge.
-            // sensor right edge -> visual left edge.
-            // Formula: visualX = bufferW - sensorRight
             const x = sensorW - right; 
             const y = top;
             const w = right - left;
@@ -114,7 +115,7 @@ function UserDashboard() {
             ctx.lineWidth = 3;
             ctx.strokeRect(x, y, w, h);
 
-            // Label (Text is normal because canvas is NOT CSS-mirrored)
+            // Label
             ctx.fillStyle = name === 'Unknown' ? '#ef4444' : '#f9bc2f';
             ctx.font = 'bold 16px Inter, sans-serif'; 
             const confVal = typeof confidence === 'number' ? confidence.toFixed(1) : '?';
@@ -128,60 +129,10 @@ function UserDashboard() {
         });
     }, []);
 
-    const processFrame = useCallback(async () => {
-        if (activeTab !== 'absen' || !webcamRef.current || attendanceStatus === 'Sudah Absen') return;
-        
-        const video = webcamRef.current.video;
-        if (!video || video.readyState < 2) return;
-
-        const imageSrc = webcamRef.current.getScreenshot();
-        if (!imageSrc) return;
-
-        try {
-            const response = await axios.post(`${API_BASE_URL}/detect_live`, { image: imageSrc });
-            if (response.data.faces) {
-                // Update boxes on canvas
-                drawBoxes(response.data.faces);
-
-                if (response.data.recognized) {
-                    const { user } = response.data;
-                    if (user.username.toLowerCase() === username.toLowerCase()) {
-                        setRecognizedUser(user);
-                        setScanStatus(`Wajah Terdeteksi: ${user.confidence.toFixed(1)}%`);
-                    }
-                } else {
-                    setRecognizedUser(null);
-                    setScanStatus('Mencari wajah...');
-                }
-            } else {
-                // Clear canvas if no faces
-                const canvas = canvasRef.current;
-                if (canvas) canvas.getContext('2d').clearRect(0, 0, canvas.width, canvas.height);
-            }
-        } catch (error) {
-            console.error('Detection error:', error);
-        }
-    }, [activeTab, username, attendanceStatus, drawBoxes, fetchHistory]);
-
-    useEffect(() => {
-        let timerId;
-        const loop = async () => {
-            if (activeTab === 'absen') {
-                await processFrame();
-                timerId = setTimeout(loop, 400); // 400ms delay AFTER processing
-            }
-        };
-        
-        if (activeTab === 'absen') {
-            loop();
-        }
-        
-        return () => {
-            if (timerId) clearTimeout(timerId);
-            const canvas = canvasRef.current;
-            if (canvas) canvas.getContext('2d').clearRect(0, 0, canvas.width, canvas.height);
-        };
-    }, [activeTab, processFrame]);
+    const handleResetScan = useCallback(() => {
+        setRecognizedUser(null);
+        setScanStatus('Siap untuk Scan');
+    }, []);
 
     const handleLogout = () => {
         document.cookie = 'user_id=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
@@ -190,18 +141,19 @@ function UserDashboard() {
         navigate('/signin');
     };
 
-    const handleSubmitAttendance = async (jenis = 'masuk') => {
+    const handleSubmitAttendance = useCallback(async (jenis = 'masuk', image = null) => {
         if (!recognizedUser || isSubmitting) return;
         setIsSubmitting(true);
         try {
             const response = await axios.post(`${API_BASE_URL}/submit_attendance`, {
                 employee_id: recognizedUser.employee_id,
                 confidence: recognizedUser.confidence,
-                jenis: jenis
+                jenis: jenis,
+                image: image
             });
             toast.success(response.data.message);
             
-            // Optimistic update of status based on what was submitted
+            // Optimistic update
             setAttendanceStatus(prev => ({
                 ...prev,
                 [jenis]: true
@@ -215,12 +167,84 @@ function UserDashboard() {
         } finally {
             setIsSubmitting(false);
         }
-    };
+    }, [recognizedUser, isSubmitting, fetchHistory]);
 
-    const handleResetScan = () => {
-        setRecognizedUser(null);
-        setScanStatus('Siap untuk Scan');
-    };
+    const processFrame = useCallback(async () => {
+        if (activeTab !== 'absen' || !webcamRef.current || attendanceStatus === 'Sudah Absen') return;
+        
+        const video = webcamRef.current.video;
+        if (!video || video.readyState < 2) return;
+
+        const imageSrc = webcamRef.current.getScreenshot();
+        if (!imageSrc) return;
+
+        try {
+            const response = await axios.post(`${API_BASE_URL}/detect_live`, { image: imageSrc });
+            if (response.data.faces) {
+                drawBoxes(response.data.faces);
+
+                if (response.data.recognized) {
+                    const { user } = response.data;
+                    console.log(`[*] Muka Kedetect: ${user.username}, Conf: ${user.confidence}%, Min: ${minConfidence}%`);
+                    
+                    // Cek apakah ini emang user yang lagi login
+                    const currentUsername = username || '';
+                    const detectedName = user.username || '';
+
+                    // Kalau username kosong (bug loading), kita anggap cocok aja kalau mukanya kedetect jelas
+                    const isMatch = currentUsername === '' || 
+                                    detectedName.toLowerCase().includes(currentUsername.toLowerCase()) || 
+                                    currentUsername.toLowerCase().includes(detectedName.toLowerCase());
+
+                    if (isMatch) {
+                        setRecognizedUser(user);
+                        setScanStatus(`Wajah Terdeteksi: ${user.confidence.toFixed(1)}%`);
+
+                        // --- AUTO SUBMIT LOGIC ---
+                        if (user.confidence >= minConfidence && !isSubmitting) {
+                            console.log("[!] AUTO-SUBMIT TRIGGERED!");
+                            setTimeout(() => {
+                                const currentType = document.querySelector('input[name="type"]:checked')?.value || 'masuk';
+                                handleSubmitAttendance(currentType, imageSrc);
+                            }, 500);
+                        } else if (user.confidence < minConfidence) {
+                            console.log(`[?] Skor ${user.confidence} belum nembus target ${minConfidence}`);
+                        }
+                    } else {
+                        console.warn(`[!] Mismatch: Kedetect ${user.username} tapi yang login ${username}`);
+                    }
+                } else {
+                    setRecognizedUser(null);
+                    setScanStatus('Wajah tidak dikenali (Unknown)');
+                }
+            } else {
+                const canvas = canvasRef.current;
+                if (canvas) canvas.getContext('2d').clearRect(0, 0, canvas.width, canvas.height);
+            }
+        } catch (error) {
+            console.error('Detection error:', error);
+        }
+    }, [activeTab, username, attendanceStatus, drawBoxes, minConfidence, isSubmitting, handleSubmitAttendance]);
+
+    useEffect(() => {
+        let timerId;
+        const loop = async () => {
+            if (activeTab === 'absen') {
+                await processFrame();
+                timerId = setTimeout(loop, 400); 
+            }
+        };
+        
+        if (activeTab === 'absen') {
+            loop();
+        }
+        
+        return () => {
+            if (timerId) clearTimeout(timerId);
+            const canvasNode = canvasRef.current;
+            if (canvasNode) canvasNode.getContext('2d').clearRect(0, 0, canvasNode.width, canvasNode.height);
+        };
+    }, [activeTab, processFrame]);
 
     const navItems = [
         { id: 'welcome', label: 'Dashboard', icon: <IconDashboard /> },
@@ -259,6 +283,7 @@ function UserDashboard() {
                     isSubmitting={isSubmitting}
                     onSubmit={handleSubmitAttendance}
                     onReset={handleResetScan}
+                    minConfidence={minConfidence}
                 />
             )}
             {activeTab === 'history' && (
