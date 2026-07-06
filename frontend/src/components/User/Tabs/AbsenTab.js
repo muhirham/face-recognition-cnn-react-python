@@ -27,19 +27,13 @@ function AbsenTab({ webcamRef, canvasRef, scanStatus, attendanceStatus, todaySch
         }
     }, [absensiType, todaySchedule]);
 
-    const isLocked = isModeDone || isEarlyCheckout;
+    const isLocked = isModeDone;
 
     const getLockMessage = () => {
         if (isModeDone) {
             return {
                 title: "Absensi Selesai",
                 desc: `Anda sudah melakukan absensi ${absensiType} hari ini.`
-            };
-        }
-        if (isEarlyCheckout) {
-            return {
-                title: "Belum Jam Pulang",
-                desc: `Sistem absen pulang baru dibuka jam ${todaySchedule.jam_pulang.substring(0, 5)}. Harap bersabar.`
             };
         }
         return null;
@@ -127,7 +121,7 @@ function AbsenTab({ webcamRef, canvasRef, scanStatus, attendanceStatus, todaySch
                         <div className="camera-viewport-wrapper">
                             {isLocked ? (
                                 <div className="blocked-view-overlay">
-                                    <div className="lock-icon">{isEarlyCheckout ? '🕒' : '🔒'}</div>
+                                    <div className="lock-icon">🔒</div>
                                     <h3>{lockMsg?.title}</h3>
                                     <p>{lockMsg?.desc}</p>
                                 </div>
@@ -138,6 +132,8 @@ function AbsenTab({ webcamRef, canvasRef, scanStatus, attendanceStatus, todaySch
                                         audio={false} 
                                         ref={webcamRef} 
                                         screenshotFormat="image/jpeg" 
+                                        screenshotQuality={0.5}
+                                        mirrored={true}
                                         className="webcam-source"
                                         videoConstraints={{
                                             width: 640,

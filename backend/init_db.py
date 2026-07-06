@@ -133,6 +133,7 @@ def init_database():
                 jenis ENUM('masuk', 'pulang') NOT NULL,
                 status ENUM('tepat_waktu', 'terlambat', 'lembur', 'pulang_awal') NOT NULL,
                 menit_terlambat INT DEFAULT 0,
+                alasan VARCHAR(255),
                 confidence_score DECIMAL(5,2),
                 foto_absen VARCHAR(255),
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -160,6 +161,16 @@ def init_database():
                 keterangan TEXT,
                 status_approval ENUM('pending', 'approved', 'rejected') DEFAULT 'pending',
                 FOREIGN KEY (karyawan_id) REFERENCES karyawans(id) ON DELETE CASCADE
+            )
+        """)
+
+        # 11. Create Tabel Hari Libur (Holidays)
+        print("[+] Creating table 'holidays'...")
+        cursor.execute("""
+            CREATE TABLE holidays (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                tanggal DATE NOT NULL UNIQUE,
+                keterangan VARCHAR(255) NOT NULL
             )
         """)
 

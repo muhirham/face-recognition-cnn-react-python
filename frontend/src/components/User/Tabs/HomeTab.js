@@ -1,6 +1,6 @@
 import React from 'react';
 
-function HomeTab({ username, attendanceStatus, history, onGoToAbsen }) {
+function HomeTab({ username, attendanceStatus, history, holiday, onGoToAbsen }) {
     const today = new Date().toLocaleDateString('id-ID', { day: '2-digit', month: '2-digit', year: 'numeric' });
     const now = new Date();
     const localDateString = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
@@ -38,7 +38,9 @@ function HomeTab({ username, attendanceStatus, history, onGoToAbsen }) {
                         </div>
 
                         <div className="attendance-status-badge">
-                            {attendanceStatus.pulang ? (
+                            {holiday ? (
+                                <div className="p-badge pending" style={{background: '#dc2626', lineHeight: '1.4'}}>Libur: {holiday}</div>
+                            ) : attendanceStatus.pulang ? (
                                 <div className="p-badge success">Absensi Selesai</div>
                             ) : attendanceStatus.masuk ? (
                                 <div className="p-badge success">Sudah Masuk</div>
@@ -47,9 +49,11 @@ function HomeTab({ username, attendanceStatus, history, onGoToAbsen }) {
                             )}
                         </div>
 
-                        <button className="p-main-button" onClick={onGoToAbsen}>
-                            Menuju Absensi Wajah
-                        </button>
+                        {!holiday && (
+                            <button className="p-main-button" onClick={onGoToAbsen}>
+                                Menuju Absensi Wajah
+                            </button>
+                        )}
                     </div>
                 </div>
 

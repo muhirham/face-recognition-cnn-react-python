@@ -1,0 +1,171 @@
+.holiday-grid {
+    display: grid;
+    grid-template-columns: 350px 1fr;
+    gap: 24px;
+    align-items: start;
+}
+
+.holiday-card {
+    background: white;
+    border-radius: 20px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.03);
+    border: 1px solid #f1f5f9;
+    overflow: hidden;
+}
+
+.card-p-header {
+    padding: 20px 24px;
+    background: #f8fafc;
+    border-bottom: 1px solid #f1f5f9;
+}
+
+.card-p-header h3 {
+    font-size: 15px;
+    font-weight: 800;
+    color: var(--navy-primary);
+    margin: 0;
+}
+
+.card-p-body {
+    padding: 24px;
+}
+
+.list-body {
+    padding: 0;
+}
+
+.holiday-form {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.input-group {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.input-group label {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--slate-muted);
+}
+
+.input-group input {
+    padding: 12px 16px;
+    border: 1.5px solid #e2e8f0;
+    border-radius: 10px;
+    font-size: 14px;
+    transition: all 0.2s;
+    background: #f8fafc;
+}
+
+.input-group input:focus {
+    border-color: var(--gold-accent);
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(249, 188, 47, 0.1);
+    background: white;
+}
+
+.btn-add-holiday {
+    background: var(--navy-primary);
+    color: white;
+    border: none;
+    padding: 14px;
+    border-radius: 12px;
+    font-size: 14px;
+    font-weight: 800;
+    cursor: pointer;
+    transition: all 0.2s;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+}
+
+.btn-add-holiday:hover {
+    background: var(--navy-light);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(0,0,0,0.15);
+}
+
+.holiday-list-p {
+    display: flex;
+    flex-direction: column;
+    max-height: 500px;
+    overflow-y: auto;
+}
+
+.holiday-item-p {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 20px 24px;
+    border-bottom: 1px solid #f1f5f9;
+    transition: all 0.2s;
+}
+
+.holiday-item-p:hover {
+    background: #f8fafc;
+}
+
+.h-meta {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.h-date {
+    font-weight: 800;
+    color: #ef4444; /* red for holiday */
+    font-size: 15px;
+}
+
+.h-text {
+    font-size: 13px;
+    color: var(--slate-muted);
+    font-weight: 500;
+}
+
+.btn-del-icon {
+    background: #fef2f2;
+    color: #ef4444;
+    border: none;
+    width: 40px;
+    height: 40px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.btn-del-icon:hover {
+    background: #fee2e2;
+    transform: scale(1.05);
+}
+
+.empty-state {
+    padding: 40px;
+    text-align: center;
+    color: var(--slate-muted);
+    font-weight: 500;
+    font-style: italic;
+}
+
+.modal-icon-danger {
+    width: 60px;
+    height: 60px;
+    background: #fef2f2;
+    color: #ef4444;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 16px;
+}
+
+@media (max-width: 900px) {
+    .holiday-grid {
+        grid-template-columns: 1fr;
+    }
+}

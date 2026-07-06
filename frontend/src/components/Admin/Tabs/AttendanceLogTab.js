@@ -5,6 +5,11 @@ import API_BASE_URL from '../../../apiConfig';
 function AttendanceLogTab() {
     const [history, setHistory] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
+    const [selectedImage, setSelectedImage] = useState(null);
+
+    const [searchTerm, setSearchTerm] = useState('');
+    const [currentPage, setCurrentPage] = useState(1);
+    const ITEMS_PER_PAGE = 10;
 
     useEffect(() => {
         const fetchHistory = async () => {
@@ -39,12 +44,27 @@ function AttendanceLogTab() {
         return <div style={{padding: '40px', fontWeight: '800'}}>Memuat Data Riwayat Absensi...</div>;
     }
 
+    const filteredHistory = history.filter(log => 
+        (log.nama && log.nama.toLowerCase().includes(searchTerm.toLowerCase())) ||
+        (log.tanggal && log.tanggal.includes(searchTerm)) ||
+        (log.status && log.status.toLowerCase().includes(searchTerm.toLowerCase()))
+    );
+    const totalPages = Math.ceil(filteredHistory.length / ITEMS_PER_PAGE);
+    const currentHistory = filteredHistory.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE);
+
     return (
         <div className="tab-view-container animate-fade-in">
             <div className="section-header-flex">
                 <div className="header-text">
                     <h2>Data Absensi (Riwayat)</h2>
                     <p>Log mendetail seluruh aktivitas absensi masuk dan keluar karyawan.</p>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center' }}>
+                    <input 
+                        type="text" className="search-input" placeholder="Cari nama, tanggal, status..." 
+                        value={searchTerm} onChange={e => {setSearchTerm(e.target.value); setCurrentPage(1);}} 
+                        style={{ width: '250px' }}
+                    />
                 </div>
             </div>
 
@@ -63,13 +83,18 @@ function AttendanceLogTab() {
                             </tr>
                         </thead>
                         <tbody>
-                            {history.length > 0 ? (
-                                history.map((log) => (
+                            {currentHistory.length > 0 ? (
+                                currentHistory.map((log) => (
                                     <tr key={log.id}>
                                         <td data-label="Foto">
                                             <div className="att-photo-circle">
                                                 {log.foto_absen ? (
-                                                    <img src={`${API_BASE_URL}/static/attendance_photos/${log.foto_absen}`} alt="Face" />
+                                                    <img 
+                                                        src={`${API_BASE_URL}/static/attendance_photos/${log.foto_absen}`} 
+                                                        alt="Face" 
+                                                        onClick={() => setSelectedImage(`${API_BASE_URL}/static/attendance_photos/${log.foto_absen}`)}
+                                                        className="clickable-image"
+                                                    />
                                                 ) : (
                                                     <span className="no-pic">?</span>
                                                 )}
@@ -96,13 +121,33 @@ function AttendanceLogTab() {
                                 ))
                             ) : (
                                 <tr>
-                                    <td colSpan="7" className="empty-state">Belum ada data riwayat absensi yang tercatat.</td>
+                                    <td colSpan="7" className="empty-state">Belum ada data riwayat absensi yang sesuai.</td>
                                 </tr>
                             )}
                         </tbody>
                     </table>
+                    
+                    {totalPages > 1 && (
+                        <div className="pagination-controls" style={{ padding: '0 24px 20px 24px' }}>
+                            <span className="pagination-info">Menampilkan halaman {currentPage} dari {totalPages}</span>
+                            <div className="pagination-buttons">
+                                <button className="btn-page" disabled={currentPage === 1} onClick={() => setCurrentPage(p => p - 1)}>Prev</button>
+                                <button className="btn-page" disabled={currentPage === totalPages} onClick={() => setCurrentPage(p => p + 1)}>Next</button>
+                            </div>
+                        </div>
+                    )}
                 </div>
             </div>
+
+            {/* Image Viewer Modal */}
+            {selectedImage && (
+                <div className="image-viewer-overlay" onClick={() => setSelectedImage(null)}>
+                    <div className="image-viewer-content" onClick={(e) => e.stopPropagation()}>
+                        <button className="btn-close-viewer" onClick={() => setSelectedImage(null)}>✕</button>
+                        <img src={selectedImage} alt="Enlarged Face" />
+                    </div>
+                </div>
+            )}
 
             <style>{`
                 .tab-view-container { display: flex; flex-direction: column; gap: 24px; }
@@ -146,6 +191,36 @@ function AttendanceLogTab() {
                 }
                 .att-photo-circle img { width: 100%; height: 100%; object-fit: cover; }
                 .att-photo-circle .no-pic { font-size: 14px; font-weight: 800; color: #cbd5e1; }
+
+                .clickable-image { cursor: pointer; transition: transform 0.2s; }
+                .clickable-image:hover { transform: scale(1.1); box-shadow: 0 4px 12px rgba(0,0,0,0.2); }
+
+                /* Image Viewer Modal Styles */
+                .image-viewer-overlay {
+                    position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+                    background: rgba(15, 23, 42, 0.9); backdrop-filter: blur(5px);
+                    display: flex; align-items: center; justify-content: center; z-index: 3000;
+                    animation: fadeIn 0.2s;
+                }
+                .image-viewer-content {
+                    position: relative; max-width: 90%; max-height: 90vh;
+                    background: transparent; display: flex; align-items: center; justify-content: center;
+                }
+                .image-viewer-content img {
+                    max-width: 100%; max-height: 85vh; border-radius: 16px;
+                    box-shadow: 0 25px 50px rgba(0,0,0,0.5); object-fit: contain;
+                    border: 2px solid rgba(255,255,255,0.1);
+                }
+                .btn-close-viewer {
+                    position: absolute; top: -40px; right: 0;
+                    background: rgba(255,255,255,0.2); color: white; border: none;
+                    width: 32px; height: 32px; border-radius: 50%;
+                    font-size: 16px; font-weight: bold; cursor: pointer;
+                    display: flex; align-items: center; justify-content: center;
+                    transition: 0.2s;
+                }
+                .btn-close-viewer:hover { background: #ef4444; transform: scale(1.1); }
+
 
                 @media (max-width: 1024px) {
                     .premium-admin-table, .premium-admin-table tbody, .premium-admin-table tr, .premium-admin-table td { display: block; width: 100%; }

@@ -2,28 +2,33 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import API_BASE_URL from '../../apiConfig';
 import { useNavigate } from 'react-router-dom';
-import { ToastContainer, toast } from 'react-toastify';
+import { ToastContainer } from 'react-toastify';
 import Layout from '../Common/Layout';
 import { 
     IconDashboard, 
-    IconWebcam, 
     IconHistory, 
     IconUsers, 
-    IconLogout, 
-    IconReport, 
     IconSettings, 
-    IconDatabase 
+    IconWebcam, 
+    IconDatabase,
+    IconCalendar,
+    IconFileText,
+    IconAlertCircle,
+    IconArrowRightCircle,
+    IconClipboard
 } from '../Common/Icons';
 
 // Tabs
 import OverviewTab from './Tabs/OverviewTab';
 import EmployeeTab from './Tabs/EmployeeTab';
-import MasterDataTab from './Tabs/MasterDataTab';
+import MasterDepartemenTab from './Tabs/MasterDepartemenTab';
+import MasterJabatanTab from './Tabs/MasterJabatanTab';
 import RegistrationTab from './Tabs/RegistrationTab';
 import ScheduleTab from './Tabs/ScheduleTab';
-import UserTab from './Tabs/UserTab';
+import HolidayTab from './Tabs/HolidayTab';
 import AttendanceLogTab from './Tabs/AttendanceLogTab';
 import SettingsTab from './Tabs/SettingsTab';
+import ReportsTab from './Tabs/ReportsTab';
 
 function AdminDashboard() {
     const [activeTab, setActiveTab] = useState('dashboard');
@@ -67,11 +72,31 @@ function AdminDashboard() {
     const navItems = [
         { id: 'dashboard', label: 'Dashboard', icon: <IconDashboard /> },
         { id: 'history', label: 'Log Absensi', icon: <IconHistory /> },
-        { id: 'employees', label: 'Master Karyawan', icon: <IconUsers /> },
-        { id: 'master_data', label: 'Master Dept & Jabatan', icon: <IconDatabase /> },
-        { id: 'schedule', label: 'Master Shift Kerja', icon: <IconDatabase /> },
-        { id: 'users', label: 'Master Administrator', icon: <IconUsers /> },
+        { 
+            id: 'master_group', 
+            label: 'Data Master', 
+            icon: <IconDatabase />,
+            subItems: [
+                { id: 'employees', label: 'Master Karyawan', icon: <IconUsers /> },
+                { id: 'master_departemen', label: 'Master Departemen', icon: <IconDatabase /> },
+                { id: 'master_jabatan', label: 'Master Jabatan', icon: <IconDatabase /> },
+                { id: 'schedule', label: 'Master Shift Kerja', icon: <IconCalendar /> },
+                { id: 'master_holidays', label: 'Master Hari Libur', icon: <IconAlertCircle /> },
+            ]
+        },
         { id: 'registration', label: 'Pendaftaran Wajah', icon: <IconWebcam /> },
+        { 
+            id: 'reports_group', 
+            label: 'Laporan', 
+            icon: <IconFileText />,
+            subItems: [
+                { id: 'report_daily', label: 'Laporan Harian', icon: <IconCalendar /> },
+                { id: 'report_late', label: 'Laporan Keterlambatan', icon: <IconAlertCircle /> },
+                { id: 'report_early', label: 'Laporan Pulang Awal', icon: <IconArrowRightCircle /> },
+                { id: 'report_employees', label: 'Data Karyawan', icon: <IconClipboard /> },
+                { id: 'report_monthly', label: 'Rekap Bulanan', icon: <IconFileText /> },
+            ]
+        },
         { id: 'settings', label: 'Pengaturan Sistem', icon: <IconSettings /> },
     ];
 
@@ -90,10 +115,16 @@ function AdminDashboard() {
             {activeTab === 'dashboard' && <OverviewTab stats={stats} />}
             {activeTab === 'history' && <AttendanceLogTab />}
             {activeTab === 'employees' && <EmployeeTab />}
-            {activeTab === 'master_data' && <MasterDataTab />}
+            {activeTab === 'master_departemen' && <MasterDepartemenTab />}
+            {activeTab === 'master_jabatan' && <MasterJabatanTab />}
             {activeTab === 'schedule' && <ScheduleTab />}
-            {activeTab === 'users' && <UserTab />}
+            {activeTab === 'master_holidays' && <HolidayTab />}
             {activeTab === 'registration' && <RegistrationTab />}
+            {activeTab === 'report_daily' && <ReportsTab reportType="daily" />}
+            {activeTab === 'report_monthly' && <ReportsTab reportType="monthly" />}
+            {activeTab === 'report_late' && <ReportsTab reportType="late" />}
+            {activeTab === 'report_early' && <ReportsTab reportType="early" />}
+            {activeTab === 'report_employees' && <ReportsTab reportType="employees" />}
             {activeTab === 'settings' && <SettingsTab />}
 
             <ToastContainer position="top-right" theme="colored" autoClose={3000} />

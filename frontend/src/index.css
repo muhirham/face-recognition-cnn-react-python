@@ -11,3 +11,14 @@ code {
   font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
     monospace;
 }
+
+/* --- GLOBAL SEARCH & PAGINATION STYLES --- */
+.table-controls { display: flex; justify-content: flex-end; margin-bottom: 15px; }
+.search-input { padding: 8px 12px; border: 1px solid #cbd5e1; border-radius: 8px; width: 250px; font-size: 14px; outline: none; transition: 0.2s; }
+.search-input:focus { border-color: #3b82f6; box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1); }
+.pagination-controls { display: flex; justify-content: space-between; align-items: center; margin-top: 15px; padding-top: 15px; border-top: 1px solid #e2e8f0; }
+.pagination-info { font-size: 13px; color: #64748b; font-weight: 500; }
+.pagination-buttons { display: flex; gap: 8px; }
+.btn-page { padding: 6px 12px; background: white; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 13px; font-weight: 600; color: #334155; cursor: pointer; transition: 0.2s; }
+.btn-page:hover:not(:disabled) { background: #f8fafc; border-color: #94a3b8; }
+.btn-page:disabled { opacity: 0.5; cursor: not-allowed; }

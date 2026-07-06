@@ -7,6 +7,10 @@ function UserTab() {
     const [users, setUsers] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
     const [newAdmin, setNewAdmin] = useState({ username: '', password: '' });
+    const [deleteConfirm, setDeleteConfirm] = useState(null);
+    const [searchTerm, setSearchTerm] = useState('');
+    const [currentPage, setCurrentPage] = useState(1);
+    const ITEMS_PER_PAGE = 5;
 
     const fetchUsers = async () => {
         setIsLoading(true);
@@ -34,11 +38,12 @@ function UserTab() {
         } catch (err) { toast.error("Gagal menambah admin"); }
     };
 
-    const handleDelete = async (id) => {
-        if (!window.confirm("Hapus akses administrator ini?")) return;
+    const handleDelete = async () => {
+        if (!deleteConfirm) return;
         try {
-            await axios.delete(`${API_BASE_URL}/admin/users/${id}`);
+            await axios.delete(`${API_BASE_URL}/admin/users/${deleteConfirm}`);
             toast.success("Akses dihapus");
+            setDeleteConfirm(null);
             fetchUsers();
         } catch (err) { toast.error("Gagal menghapus"); }
     };
@@ -46,6 +51,10 @@ function UserTab() {
     if (isLoading) {
         return <div style={{padding: '40px', fontWeight: '800'}}>Memuat Data Administrator...</div>;
     }
+
+    const filteredUsers = users.filter(u => u.username.toLowerCase().includes(searchTerm.toLowerCase()));
+    const totalPages = Math.ceil(filteredUsers.length / ITEMS_PER_PAGE);
+    const currentUsers = filteredUsers.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE);
 
     return (
         <div className="tab-view-container animate-fade-in">
@@ -85,27 +94,57 @@ function UserTab() {
 
                 {/* Daftar Admin */}
                 <div className="users-card-p main-list">
-                    <div className="card-p-header">
+                    <div className="card-p-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                         <h3>🔑 Daftar Akun Terdaftar</h3>
+                        <input 
+                            type="text" className="search-input" placeholder="Cari username..." 
+                            value={searchTerm} onChange={e => {setSearchTerm(e.target.value); setCurrentPage(1);}} 
+                            style={{ width: '160px', padding: '6px 10px' }}
+                        />
                     </div>
                     <div className="card-p-body">
                         <div className="admin-list-scroll">
-                            {users.length > 0 ? users.map(u => (
+                            {currentUsers.length > 0 ? currentUsers.map(u => (
                                 <div key={u.id} className="admin-item-p">
                                     <div className="item-left">
                                         <div className="admin-avatar">👤</div>
                                         <div className="admin-meta">
                                             <span className="u-name">{u.username}</span>
-                                            <span className="u-role">System Administrator</span>
+                                            <span className="u-role">
+                                                {u.role === 'admin' ? 'System Administrator' : 'Karyawan / Pegawai'}
+                                            </span>
                                         </div>
                                     </div>
-                                    <button className="btn-del-mini" onClick={() => handleDelete(u.id)}>Hapus Akses</button>
+                                    <button className="btn-del-mini" onClick={() => setDeleteConfirm(u.id)}>Hapus Akses</button>
                                 </div>
-                            )) : <p className="empty-p">Belum ada administrator.</p>}
+                            )) : <p className="empty-p">Belum ada administrator yang sesuai.</p>}
                         </div>
+                        
+                        {totalPages > 1 && (
+                            <div className="pagination-controls">
+                                <span className="pagination-info">Halaman {currentPage} dari {totalPages}</span>
+                                <div className="pagination-buttons">
+                                    <button className="btn-page" disabled={currentPage === 1} onClick={() => setCurrentPage(p => p - 1)}>Prev</button>
+                                    <button className="btn-page" disabled={currentPage === totalPages} onClick={() => setCurrentPage(p => p + 1)}>Next</button>
+                                </div>
+                            </div>
+                        )}
                     </div>
                 </div>
             </div>
+
+            {deleteConfirm && (
+                <div className="custom-modal-overlay">
+                    <div className="custom-modal-box">
+                        <h3>Konfirmasi Hapus Admin</h3>
+                        <p>Yakin ingin mencabut akses administrator akun ini?<br/>Akun ini tidak akan bisa login ke panel kontrol lagi.</p>
+                        <div className="modal-actions-p">
+                            <button className="btn-cancel" onClick={() => setDeleteConfirm(null)}>Batal</button>
+                            <button className="btn-confirm-delete" onClick={handleDelete}>Ya, Cabut Akses</button>
+                        </div>
+                    </div>
+                </div>
+            )}
 
             <style>{`
                 .users-grid-p { display: grid; grid-template-columns: 1fr 1.5fr; gap: 24px; }
@@ -128,8 +167,19 @@ function UserTab() {
                 .admin-meta { display: flex; flex-direction: column; }
                 .u-name { font-weight: 800; color: var(--navy-primary); font-size: 15px; }
                 .u-role { font-size: 11px; color: var(--slate-muted); font-weight: 700; }
-                .btn-del-mini { background: #fff5f5; color: #ff4d4f; border: none; padding: 8px 12px; border-radius: 8px; font-size: 12px; font-weight: 700; cursor: pointer; }
+                .btn-del-mini { background: #fff5f5; color: #ff4d4f; border: none; padding: 8px 12px; border-radius: 8px; font-size: 12px; font-weight: 700; cursor: pointer; transition: 0.2s; }
                 .btn-del-mini:hover { background: #ff4d4f; color: white; }
+
+                .custom-modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; z-index: 1000; animation: fadeIn 0.2s; }
+                .custom-modal-box { background: white; padding: 24px 30px; border-radius: 16px; width: 400px; max-width: 90%; box-shadow: 0 20px 40px rgba(0,0,0,0.1); text-align: center; }
+                .custom-modal-box h3 { margin-top: 0; color: #dc2626; font-size: 20px; margin-bottom: 12px; }
+                .custom-modal-box p { color: var(--slate-muted); font-size: 14px; margin-bottom: 24px; line-height: 1.5; }
+                .modal-actions-p { display: flex; gap: 12px; justify-content: center; }
+                .modal-actions-p button { padding: 10px 20px; border-radius: 8px; font-weight: 700; border: none; cursor: pointer; transition: 0.2s; }
+                .btn-cancel { background: #f1f5f9; color: var(--navy-primary); }
+                .btn-cancel:hover { background: #e2e8f0; }
+                .btn-confirm-delete { background: #dc2626; color: white; }
+                .btn-confirm-delete:hover { background: #b91c1c; }
 
                 @media (max-width: 900px) { .users-grid-p { grid-template-columns: 1fr; } }
             `}</style>

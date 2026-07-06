@@ -21,10 +21,13 @@ function UserDashboard() {
     const [history, setHistory] = useState([]);
     const [attendanceStatus, setAttendanceStatus] = useState({ masuk: false, pulang: false });
     const [todaySchedule, setTodaySchedule] = useState(null);
+    const [holiday, setHoliday] = useState(null);
     const [scanStatus, setScanStatus] = useState('Siap untuk Scan');
     const [recognizedUser, setRecognizedUser] = useState(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [earlyCheckoutModal, setEarlyCheckoutModal] = useState({ isOpen: false, data: null, reason: '' });
     const [minConfidence, setMinConfidence] = useState(85); // Global threshold
+    const autoSubmitLock = useRef(false); // Guard against auto-submit spam
 
     // Refs for camera and drawing overlay
     const webcamRef = useRef(null);
@@ -74,6 +77,9 @@ function UserDashboard() {
                 }
                 if (response.data.schedule) {
                     setTodaySchedule(response.data.schedule);
+                }
+                if (response.data.holiday) {
+                    setHoliday(response.data.holiday);
                 }
                 fetchHistory();
             } catch (error) { 
@@ -141,15 +147,30 @@ function UserDashboard() {
         navigate('/signin');
     };
 
-    const handleSubmitAttendance = useCallback(async (jenis = 'masuk', image = null) => {
+    const handleSubmitAttendance = useCallback(async (jenis = 'masuk', image = null, reason = null) => {
         if (!recognizedUser || isSubmitting) return;
+
+        // Cek pulang awal
+        if (jenis === 'pulang' && !reason && todaySchedule?.jam_pulang) {
+            const now = new Date();
+            const [h, m, s] = todaySchedule.jam_pulang.split(':').map(Number);
+            const checkoutGate = new Date();
+            checkoutGate.setHours(h, m, s || 0, 0);
+            
+            if (now < checkoutGate) {
+                setEarlyCheckoutModal({ isOpen: true, data: { jenis, image }, reason: '' });
+                return; // PAUSE submit
+            }
+        }
+
         setIsSubmitting(true);
         try {
             const response = await axios.post(`${API_BASE_URL}/submit_attendance`, {
                 employee_id: recognizedUser.employee_id,
                 confidence: recognizedUser.confidence,
                 jenis: jenis,
-                image: image
+                image: image,
+                reason: reason
             });
             toast.success(response.data.message);
             
@@ -201,11 +222,14 @@ function UserDashboard() {
                         setScanStatus(`Wajah Terdeteksi: ${user.confidence.toFixed(1)}%`);
 
                         // --- AUTO SUBMIT LOGIC ---
-                        if (user.confidence >= minConfidence && !isSubmitting) {
+                        if (user.confidence >= minConfidence && !isSubmitting && !autoSubmitLock.current) {
                             console.log("[!] AUTO-SUBMIT TRIGGERED!");
+                            autoSubmitLock.current = true; // Lock immediately (sync)
                             setTimeout(() => {
                                 const currentType = document.querySelector('input[name="type"]:checked')?.value || 'masuk';
-                                handleSubmitAttendance(currentType, imageSrc);
+                                handleSubmitAttendance(currentType, imageSrc).finally(() => {
+                                    autoSubmitLock.current = false; // Release lock after done
+                                });
                             }, 500);
                         } else if (user.confidence < minConfidence) {
                             console.log(`[?] Skor ${user.confidence} belum nembus target ${minConfidence}`);
@@ -269,6 +293,7 @@ function UserDashboard() {
                     username={username} 
                     attendanceStatus={attendanceStatus} 
                     history={history}
+                    holiday={holiday}
                     onGoToAbsen={() => setActiveTab('absen')}
                 />
             )}
@@ -290,6 +315,38 @@ function UserDashboard() {
                 <HistoryTab history={history} />
             )}
             
+            {earlyCheckoutModal.isOpen && (
+                <div className="custom-modal-overlay">
+                    <div className="custom-modal-box">
+                        <h3>Konfirmasi Pulang Awal</h3>
+                        <p>Anda mencoba absen pulang sebelum jam {todaySchedule?.jam_pulang?.substring(0,5)}.<br/>Silakan masukkan alasan Anda pulang awal:</p>
+                        <input 
+                            type="text" 
+                            className="search-input"
+                            style={{ width: '100%', padding: '12px', marginTop: '10px', marginBottom: '20px', borderRadius: '10px', border: '1.5px solid #e2e8f0' }}
+                            placeholder="Contoh: Sakit perut, Izin ke RS, dll"
+                            value={earlyCheckoutModal.reason}
+                            onChange={(e) => setEarlyCheckoutModal(prev => ({ ...prev, reason: e.target.value }))}
+                        />
+                        <div className="modal-actions-p">
+                            <button className="btn-cancel" onClick={() => {
+                                setEarlyCheckoutModal({ isOpen: false, data: null, reason: '' });
+                                handleResetScan();
+                            }}>Batal</button>
+                            <button className="btn-primary-imp" style={{ padding: '10px 20px', border: 'none', borderRadius: '8px', color: 'white', fontWeight: 'bold' }} onClick={() => {
+                                if (!earlyCheckoutModal.reason.trim()) {
+                                    toast.error("Alasan tidak boleh kosong!");
+                                    return;
+                                }
+                                const { jenis, image } = earlyCheckoutModal.data;
+                                setEarlyCheckoutModal(prev => ({ ...prev, isOpen: false }));
+                                handleSubmitAttendance(jenis, image, earlyCheckoutModal.reason);
+                            }}>Simpan Absensi</button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
             <ToastContainer position="top-right" theme="colored" autoClose={3000} />
         </Layout>
     );
