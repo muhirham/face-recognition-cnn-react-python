@@ -1,5 +1,5 @@
 from flask import Blueprint, request, jsonify
-from utils import get_db_connection
+from utils import get_db_connection, get_wib_time
 import random
 import string
 import traceback
@@ -110,8 +110,7 @@ def get_greeting():
             'min_confidence': min_conf
         }
         
-        from datetime import datetime
-        today_str = datetime.now().strftime('%Y-%m-%d')
+        today_str = get_wib_time().strftime('%Y-%m-%d')
         cursor.execute("SELECT keterangan FROM hari_liburs WHERE tanggal = %s", (today_str,))
         holiday = cursor.fetchone()
         response_data['holiday'] = holiday['keterangan'] if holiday else None

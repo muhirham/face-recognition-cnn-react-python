@@ -1,5 +1,5 @@
 from flask import Blueprint, request, jsonify
-from utils import get_db_connection, get_all_templates, save_attendance_photo
+from utils import get_db_connection, get_all_templates, save_attendance_photo, get_wib_time
 import base64
 import numpy as np
 import cv2
@@ -218,7 +218,7 @@ def submit_attendance():
         if confidence < min_conf_required:
             return jsonify({'message': f'Absensi Gagal! Kemiripan wajah Anda ({confidence}%) di bawah batas minimum {min_conf_required}%.'}), 400
             
-        now = datetime.now()
+        now = get_wib_time()
         date_str, time_str = now.strftime('%Y-%m-%d'), now.strftime('%H:%M:%S')
         
         cursor.execute("SELECT id FROM absensis WHERE karyawan_id = %s AND tanggal = %s AND jenis = %s", (emp_id, date_str, jenis))

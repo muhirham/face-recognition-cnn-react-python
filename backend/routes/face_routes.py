@@ -146,9 +146,20 @@ def delete_dataset(employee_id):
     conn = get_db_connection()
     cursor = conn.cursor(dictionary=True)
     try:
+        cursor.execute("SELECT nama, kode_karyawan FROM karyawans WHERE id = %s", (employee_id,))
+        emp = cursor.fetchone()
+
         cursor.execute("DELETE FROM face_templates WHERE karyawan_id = %s", (employee_id,))
         conn.commit()
         load_face_cache()
+        
+        if emp:
+            folder_name = f"{emp['nama'].lower()} ({emp['kode_karyawan']})"
+            dataset_dir = os.path.join(DATASETS_DIR, folder_name)
+            if os.path.exists(dataset_dir):
+                import shutil
+                shutil.rmtree(dataset_dir)
+                
         return jsonify({'message': 'Dataset dan template berhasil dihapus'})
     except Exception as e:
         if conn: conn.rollback()

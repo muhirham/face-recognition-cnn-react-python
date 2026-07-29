@@ -1,5 +1,5 @@
 from flask import Blueprint, request, jsonify
-from utils import get_db_connection
+from utils import get_db_connection, get_wib_time
 from datetime import datetime
 import os
 import shutil
@@ -34,7 +34,7 @@ def get_admin_stats():
     conn = get_db_connection()
     cursor = conn.cursor(dictionary=True)
     try:
-        today = datetime.now().strftime('%Y-%m-%d')
+        today = get_wib_time().strftime('%Y-%m-%d')
         cursor.execute("SELECT COUNT(*) as total FROM karyawans")
         total = cursor.fetchone()['total']
         

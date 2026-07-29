@@ -1,5 +1,5 @@
 from flask import Blueprint, request, jsonify
-from utils import get_db_connection
+from utils import get_db_connection, get_wib_time
 from datetime import datetime, timedelta
 import calendar
 
@@ -7,7 +7,7 @@ reports_bp = Blueprint('reports', __name__)
 
 @reports_bp.route('/admin/reports/daily', methods=['GET'])
 def report_daily():
-    date_str = request.args.get('date', datetime.now().strftime('%Y-%m-%d'))
+    date_str = request.args.get('date', get_wib_time().strftime('%Y-%m-%d'))
     conn = get_db_connection()
     cursor = conn.cursor(dictionary=True)
     try:
@@ -35,7 +35,7 @@ def report_daily():
 
 @reports_bp.route('/admin/reports/monthly', methods=['GET'])
 def report_monthly():
-    now = datetime.now()
+    now = get_wib_time()
     month = int(request.args.get('month', now.month))
     year = int(request.args.get('year', now.year))
     

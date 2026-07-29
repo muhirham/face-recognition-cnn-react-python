@@ -45,7 +45,7 @@ function SignUp() {
         }
 
         try {
-            const response = await axios.post(`${API_BASE_URL}/register`, {
+            await axios.post(`${API_BASE_URL}/register`, {
                 ...formData,
                 image: imageSrc
             });

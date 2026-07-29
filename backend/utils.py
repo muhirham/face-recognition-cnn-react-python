@@ -6,7 +6,7 @@ import cv2
 import numpy as np
 import face_recognition
 import json
-from datetime import datetime
+from datetime import datetime, timezone, timedelta
 import time
 import threading
 from config import Config
@@ -21,6 +21,11 @@ db_config = {
 UPLOAD_FOLDER = 'static/attendance_photos'
 if not os.path.exists(UPLOAD_FOLDER):
     os.makedirs(UPLOAD_FOLDER)
+
+# Helper untuk mendapatkan waktu WIB yang konsisten
+def get_wib_time():
+    wib_tz = timezone(timedelta(hours=7))
+    return datetime.now(wib_tz)
 
 def cleanup_old_photos(days=90):
     try:
@@ -52,7 +57,7 @@ def save_attendance_photo(image_base64, employee_id):
     try:
         header, encoded = image_base64.split(",", 1)
         data = base64.b64decode(encoded)
-        filename = f"att_{employee_id}_{datetime.now().strftime('%Y%m%d_%H%M%S')}_{uuid.uuid4().hex[:6]}.jpg"
+        filename = f"att_{employee_id}_{get_wib_time().strftime('%Y%m%d_%H%M%S')}_{uuid.uuid4().hex[:6]}.jpg"
         filepath = os.path.join(UPLOAD_FOLDER, filename)
         with open(filepath, "wb") as f:
             f.write(data)

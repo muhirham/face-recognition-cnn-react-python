@@ -1,5 +1,5 @@
 from flask import Blueprint, request, jsonify
-from utils import get_db_connection
+from utils import get_db_connection, get_wib_time
 import holidays
 from datetime import datetime
 
@@ -45,7 +45,7 @@ def sync_holidays():
     conn = get_db_connection()
     cursor = conn.cursor()
     try:
-        current_year = datetime.now().year
+        current_year = get_wib_time().year
         id_holidays = holidays.ID(years=current_year)
         
         added_count = 0

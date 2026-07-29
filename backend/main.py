@@ -34,4 +34,4 @@ def serve_dataset(emp_code, filename):
 if __name__ == '__main__':
     print("[*] Starting Production Server (Waitress WSGI) on 0.0.0.0:5000")
     from waitress import serve
-    serve(app, host='0.0.0.0', port=5000, threads=6)
+    serve(app, host='0.0.0.0', port=5000, threads=32)
