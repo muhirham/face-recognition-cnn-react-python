@@ -43,15 +43,7 @@ def init_database():
             )
         """)
 
-        # 5. Create Tabel Master 3: Jabatans
-        print("[+] Creating table 'jabatans'...")
-        cursor.execute("""
-            CREATE TABLE jabatans (
-                id INT AUTO_INCREMENT PRIMARY KEY,
-                nama_jabatan VARCHAR(100) NOT NULL UNIQUE,
-                level INT DEFAULT 1
-            )
-        """)
+
 
         # 6. Create Tabel Master 4: Karyawans
         print("[+] Creating table 'karyawans'...")
@@ -60,15 +52,15 @@ def init_database():
                 id INT AUTO_INCREMENT PRIMARY KEY,
                 user_id INT UNIQUE,
                 dept_id INT,
-                jabatan_id INT,
+                jabatan VARCHAR(100),
                 kode_karyawan VARCHAR(50) UNIQUE NOT NULL,
                 nama VARCHAR(100) NOT NULL,
                 foto_referensi VARCHAR(255),
+                nomor_hp VARCHAR(20) DEFAULT '-',
                 status_kerja ENUM('aktif', 'non-aktif') DEFAULT 'aktif',
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
-                FOREIGN KEY (dept_id) REFERENCES departemens(id) ON DELETE SET NULL,
-                FOREIGN KEY (jabatan_id) REFERENCES jabatans(id) ON DELETE SET NULL
+                FOREIGN KEY (dept_id) REFERENCES departemens(id) ON DELETE SET NULL
             )
         """)
 
@@ -107,6 +99,7 @@ def init_database():
         
         # Seed default confidence if not exists
         cursor.execute("INSERT IGNORE INTO pengaturans (kunci, nilai) VALUES ('min_confidence', '85')")
+        cursor.execute("INSERT IGNORE INTO pengaturans (kunci, nilai) VALUES ('allowed_ips', '127.0.0.1,::1')")
 
         # 8. Tabel Template Wajah (Master AI)
         print("[+] Creating table 'face_templates'...")
@@ -181,9 +174,8 @@ def init_database():
         cursor.execute("INSERT INTO users (username, email, password_hash, nama_lengkap, role) VALUES (%s, %s, %s, %s, %s)",
                        ('admin', 'admin@gmail.com', 'admin123', 'Administrator', 'admin'))
         
-        # Departemen & Jabatan Contoh
+        # Departemen Contoh
         cursor.execute("INSERT INTO departemens (nama_dept) VALUES ('IT'), ('HRD'), ('Marketing')")
-        cursor.execute("INSERT INTO jabatans (nama_jabatan) VALUES ('Manager'), ('Supervisor'), ('Staff')")
         
         # Shift Default (Normal)
         cursor.execute("INSERT INTO shift_kerjas (nama_shift, jam_masuk, jam_pulang, toleransi_menit) VALUES (%s, %s, %s, %s)",

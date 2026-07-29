@@ -9,7 +9,7 @@ function AttendanceLogTab() {
 
     const [searchTerm, setSearchTerm] = useState('');
     const [currentPage, setCurrentPage] = useState(1);
-    const ITEMS_PER_PAGE = 10;
+    const [itemsPerPage, setItemsPerPage] = useState(10);
 
     useEffect(() => {
         const fetchHistory = async () => {
@@ -49,8 +49,8 @@ function AttendanceLogTab() {
         (log.tanggal && log.tanggal.includes(searchTerm)) ||
         (log.status && log.status.toLowerCase().includes(searchTerm.toLowerCase()))
     );
-    const totalPages = Math.ceil(filteredHistory.length / ITEMS_PER_PAGE);
-    const currentHistory = filteredHistory.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE);
+    const totalPages = Math.ceil(filteredHistory.length / itemsPerPage) || 1;
+    const currentHistory = filteredHistory.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
 
     return (
         <div className="tab-view-container animate-fade-in">
@@ -127,12 +127,45 @@ function AttendanceLogTab() {
                         </tbody>
                     </table>
                     
-                    {totalPages > 1 && (
-                        <div className="pagination-controls" style={{ padding: '0 24px 20px 24px' }}>
-                            <span className="pagination-info">Menampilkan halaman {currentPage} dari {totalPages}</span>
-                            <div className="pagination-buttons">
-                                <button className="btn-page" disabled={currentPage === 1} onClick={() => setCurrentPage(p => p - 1)}>Prev</button>
-                                <button className="btn-page" disabled={currentPage === totalPages} onClick={() => setCurrentPage(p => p + 1)}>Next</button>
+                    {filteredHistory.length > 0 && (
+                        <div className="pagination-container">
+                            <div className="page-info">
+                                Menampilkan {((currentPage - 1) * itemsPerPage) + 1} - {Math.min(currentPage * itemsPerPage, filteredHistory.length)} dari {filteredHistory.length} data
+                            </div>
+                            
+                            <div className="page-controls">
+                                <div className="rows-per-page">
+                                    <label>Tampilkan:</label>
+                                    <select 
+                                        value={itemsPerPage} 
+                                        onChange={(e) => {
+                                            setItemsPerPage(Number(e.target.value));
+                                            setCurrentPage(1);
+                                        }}
+                                    >
+                                        <option value={10}>10</option>
+                                        <option value={25}>25</option>
+                                        <option value={50}>50</option>
+                                    </select>
+                                </div>
+                                
+                                <div className="page-buttons">
+                                    <button 
+                                        className="btn-page" 
+                                        onClick={() => setCurrentPage(p => p - 1)} 
+                                        disabled={currentPage === 1}
+                                    >
+                                        Prev
+                                    </button>
+                                    <span className="page-current">Page {currentPage} of {totalPages}</span>
+                                    <button 
+                                        className="btn-page" 
+                                        onClick={() => setCurrentPage(p => p + 1)} 
+                                        disabled={currentPage === totalPages}
+                                    >
+                                        Next
+                                    </button>
+                                </div>
                             </div>
                         </div>
                     )}
@@ -221,7 +254,62 @@ function AttendanceLogTab() {
                 }
                 .btn-close-viewer:hover { background: #ef4444; transform: scale(1.1); }
 
+                /* Pagination Container */
+                .pagination-container {
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: center;
+                    padding: 16px 24px;
+                    background: #f8fafc;
+                    border-top: 1px solid #e2e8f0;
+                    flex-wrap: wrap;
+                    gap: 16px;
+                }
 
+                .page-info { font-size: 13px; color: var(--slate-muted); font-weight: 500; }
+
+                .page-controls {
+                    display: flex;
+                    align-items: center;
+                    gap: 24px;
+                }
+
+                .rows-per-page {
+                    display: flex;
+                    align-items: center;
+                    gap: 8px;
+                    font-size: 13px;
+                    color: var(--slate-muted);
+                }
+                .rows-per-page select {
+                    padding: 4px 8px;
+                    border-radius: 6px;
+                    border: 1px solid #cbd5e1;
+                    outline: none;
+                    background: white;
+                    cursor: pointer;
+                    font-size: 13px;
+                }
+
+                .page-buttons {
+                    display: flex;
+                    align-items: center;
+                    gap: 12px;
+                }
+                .page-current { font-size: 13px; font-weight: 600; color: var(--navy-primary); }
+                .btn-page {
+                    padding: 6px 12px;
+                    background: white;
+                    border: 1px solid #cbd5e1;
+                    border-radius: 6px;
+                    font-size: 13px;
+                    font-weight: 600;
+                    color: var(--navy-primary);
+                    cursor: pointer;
+                    transition: 0.2s;
+                }
+                .btn-page:hover:not(:disabled) { background: #f1f5f9; border-color: #94a3b8; }
+                .btn-page:disabled { background: #f1f5f9; color: #94a3b8; cursor: not-allowed; opacity: 0.6; }
                 @media (max-width: 1024px) {
                     .premium-admin-table, .premium-admin-table tbody, .premium-admin-table tr, .premium-admin-table td { display: block; width: 100%; }
                     .premium-admin-table thead { display: none; }

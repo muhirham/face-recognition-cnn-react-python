@@ -22,7 +22,7 @@ import {
 import OverviewTab from './Tabs/OverviewTab';
 import EmployeeTab from './Tabs/EmployeeTab';
 import MasterDepartemenTab from './Tabs/MasterDepartemenTab';
-import MasterJabatanTab from './Tabs/MasterJabatanTab';
+import MasterDatasetTab from './Tabs/MasterDatasetTab';
 import RegistrationTab from './Tabs/RegistrationTab';
 import ScheduleTab from './Tabs/ScheduleTab';
 import HolidayTab from './Tabs/HolidayTab';
@@ -79,7 +79,7 @@ function AdminDashboard() {
             subItems: [
                 { id: 'employees', label: 'Master Karyawan', icon: <IconUsers /> },
                 { id: 'master_departemen', label: 'Master Departemen', icon: <IconDatabase /> },
-                { id: 'master_jabatan', label: 'Master Jabatan', icon: <IconDatabase /> },
+                { id: 'master_dataset', label: 'Master Data Citra', icon: <IconDatabase /> },
                 { id: 'schedule', label: 'Master Shift Kerja', icon: <IconCalendar /> },
                 { id: 'master_holidays', label: 'Master Hari Libur', icon: <IconAlertCircle /> },
             ]
@@ -90,7 +90,7 @@ function AdminDashboard() {
             label: 'Laporan', 
             icon: <IconFileText />,
             subItems: [
-                { id: 'report_daily', label: 'Laporan Harian', icon: <IconCalendar /> },
+                { id: 'report_daily', label: 'Laporan Kehadiran', icon: <IconCalendar /> },
                 { id: 'report_late', label: 'Laporan Keterlambatan', icon: <IconAlertCircle /> },
                 { id: 'report_early', label: 'Laporan Pulang Awal', icon: <IconArrowRightCircle /> },
                 { id: 'report_employees', label: 'Data Karyawan', icon: <IconClipboard /> },
@@ -116,7 +116,7 @@ function AdminDashboard() {
             {activeTab === 'history' && <AttendanceLogTab />}
             {activeTab === 'employees' && <EmployeeTab />}
             {activeTab === 'master_departemen' && <MasterDepartemenTab />}
-            {activeTab === 'master_jabatan' && <MasterJabatanTab />}
+            {activeTab === 'master_dataset' && <MasterDatasetTab />}
             {activeTab === 'schedule' && <ScheduleTab />}
             {activeTab === 'master_holidays' && <HolidayTab />}
             {activeTab === 'registration' && <RegistrationTab />}

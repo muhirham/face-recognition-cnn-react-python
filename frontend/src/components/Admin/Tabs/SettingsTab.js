@@ -4,7 +4,7 @@ import API_BASE_URL from '../../../apiConfig';
 import { toast } from 'react-toastify';
 
 function SettingsTab() {
-    const [settings, setSettings] = useState({ min_confidence: 85 });
+    const [settings, setSettings] = useState({ min_confidence: 85, allowed_ips: '127.0.0.1,::1' });
     const [isLoading, setIsLoading] = useState(false);
 
     useEffect(() => {
@@ -91,6 +91,22 @@ function SettingsTab() {
                                 <input type="checkbox" defaultChecked />
                                 <span className="slider round"></span>
                             </label>
+                        </div>
+                        <div className="config-item">
+                            <div className="config-text">
+                                <strong>IP Jaringan Kantor (Allowed IPs)</strong>
+                                <p>Batasi absensi hanya dari IP ini. (Pisahkan dengan koma jika lebih dari satu)</p>
+                            </div>
+                            <div className="input-with-label" style={{ width: '40%' }}>
+                                <input 
+                                    type="text" 
+                                    value={settings.allowed_ips || ''} 
+                                    onChange={(e) => setSettings({...settings, allowed_ips: e.target.value})}
+                                    className="small-input" 
+                                    style={{ width: '100%', textAlign: 'left' }}
+                                    placeholder="Misal: 127.0.0.1,192.168.1.10"
+                                />
+                            </div>
                         </div>
                     </div>
                     <button className="btn-save-settings" onClick={handleSave} disabled={isLoading}>

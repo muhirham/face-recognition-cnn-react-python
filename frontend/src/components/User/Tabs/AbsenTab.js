@@ -1,35 +1,25 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import Webcam from 'react-webcam';
 
-function AbsenTab({ webcamRef, canvasRef, scanStatus, attendanceStatus, todaySchedule, recognizedUser, isSubmitting, onSubmit, onReset, minConfidence }) {
-    const [absensiType, setAbsensiType] = useState('masuk');
-    const canSubmit = recognizedUser && recognizedUser.confidence >= (minConfidence || 85);
+import axios from 'axios';
+import API_BASE_URL from '../../../apiConfig';
+
+function AbsenTab({ webcamRef, canvasRef, scanStatus, attendanceStatus, todaySchedule, recognizedUser, isSubmitting, onSubmit, onReset, minConfidence, absensiType, setAbsensiType }) {
+    const [networkValid, setNetworkValid] = useState(null);
+    const [networkMsg, setNetworkMsg] = useState('');
+
 
     // Smart logic to determine if current tab is locked
     const isModeDone = absensiType === 'masuk' ? attendanceStatus.masuk : attendanceStatus.pulang;
-    
-    // Time validation for Checkout (Pulang)
-    const [isEarlyCheckout, setIsEarlyCheckout] = useState(false);
-    useEffect(() => {
-        if (absensiType === 'pulang' && todaySchedule && todaySchedule.jam_pulang) {
-            const now = new Date();
-            const [h, m, s] = todaySchedule.jam_pulang.split(':').map(Number);
-            const checkoutGate = new Date();
-            checkoutGate.setHours(h, m, s || 0, 0);
-
-            if (now < checkoutGate) {
-                setIsEarlyCheckout(true);
-            } else {
-                setIsEarlyCheckout(false);
-            }
-        } else {
-            setIsEarlyCheckout(false);
-        }
-    }, [absensiType, todaySchedule]);
-
-    const isLocked = isModeDone;
+    const isLocked = isModeDone || networkValid === false;
 
     const getLockMessage = () => {
+        if (networkValid === false) {
+            return {
+                title: "Akses Ditolak",
+                desc: networkMsg || "Anda tidak terhubung dengan jaringan internal perusahaan."
+            };
+        }
         if (isModeDone) {
             return {
                 title: "Absensi Selesai",
@@ -40,6 +30,27 @@ function AbsenTab({ webcamRef, canvasRef, scanStatus, attendanceStatus, todaySch
     };
 
     const lockMsg = getLockMessage();
+
+    // Check Network on Mount
+    useEffect(() => {
+        let isMounted = true;
+        const checkNet = async () => {
+            try {
+                const res = await axios.get(`${API_BASE_URL}/check_network`);
+                if (isMounted) {
+                    setNetworkValid(res.data.allowed);
+                    setNetworkMsg(res.data.message);
+                }
+            } catch (err) {
+                if (isMounted) {
+                    setNetworkValid(false);
+                    setNetworkMsg(err.response?.data?.message || "Gagal memverifikasi jaringan.");
+                }
+            }
+        };
+        checkNet();
+        return () => { isMounted = false; };
+    }, []);
 
     // Aggressive scroll lock on mount, unlock on unmount
     useEffect(() => {
@@ -159,42 +170,7 @@ function AbsenTab({ webcamRef, canvasRef, scanStatus, attendanceStatus, todaySch
                         </div>
                     )}
 
-                    {/* Manual Validation Block */}
-                    {!isLocked && recognizedUser && (
-                        <div className="absen-validation-block animate-slide-up">
-                            <div className="validation-header">
-                                <div className="user-avatar-placeholder">👤</div>
-                                <div className="user-meta">
-                                    <h4>{recognizedUser.username}</h4>
-                                    <p className={`confidence-tag ${canSubmit ? 'high' : 'low'}`}>
-                                        Akurasi: {recognizedUser.confidence.toFixed(1)}%
-                                    </p>
-                                </div>
-                            </div>
-                            
-                            {!canSubmit && (
-                                <div className="threshold-warning">
-                                    ⚠️ Akurasi di bawah batas minimal (85%). Silakan pindah ke posisi dengan cahaya lebih baik.
-                                </div>
-                            )}
 
-                            <div className="validation-buttons">
-                                <button className="btn-reset-light" onClick={onReset}>Scan Ulang</button>
-                                <button 
-                                    className={`btn-submit-main ${canSubmit && !isSubmitting ? 'active' : 'disabled'}`}
-                                    onClick={() => {
-                                        if (canSubmit && !isSubmitting) {
-                                            const image = webcamRef.current.getScreenshot();
-                                            onSubmit(absensiType, image);
-                                        }
-                                    }}
-                                    disabled={!canSubmit || isSubmitting}
-                                >
-                                    {isSubmitting ? 'Menyimpan...' : `Simpan Absensi ${absensiType.toUpperCase()}`}
-                                </button>
-                            </div>
-                        </div>
-                    )}
 
                     {/* Result Card (Academic Match) */}
                     {isModeDone && (
@@ -326,14 +302,12 @@ function AbsenTab({ webcamRef, canvasRef, scanStatus, attendanceStatus, todaySch
                 }
                 .webcam-mirror-wrapper {
                     position: absolute; inset: 0;
-                    transform: scaleX(-1);
                 }
                 .webcam-source { width: 100%; height: 100%; object-fit: cover; }
                 .scan-canvas-overlay { 
                     position: absolute; top: 0; left: 0; 
                     width: 100%; height: 100%; 
                     z-index: 5; 
-                    object-fit: cover; 
                     pointer-events: none; 
                 }
                 .scanner-line { position: absolute; top: 0; left: 0; width: 100%; height: 2px; background: var(--gold-accent); box-shadow: 0 0 15px var(--gold-accent); z-index: 10; animation: scanAnim 3s linear infinite; }

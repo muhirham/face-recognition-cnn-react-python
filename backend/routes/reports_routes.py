@@ -25,6 +25,8 @@ def report_daily():
         raw_logs = cursor.fetchall()
         for row in raw_logs:
             row['waktu'] = str(row['waktu']) if row['waktu'] else None
+            if row['status'] == 'lembur':
+                row['status'] = 'tepat_waktu'
             
         return jsonify({'date': date_str, 'data': raw_logs})
     finally:
@@ -133,10 +135,9 @@ def report_employees():
     try:
         cursor.execute("""
             SELECT 
-                k.kode_karyawan, k.nama, d.nama_dept, j.nama_jabatan, k.status_kerja
+                k.kode_karyawan, k.nama, d.nama_dept, k.jabatan as nama_jabatan, k.status_kerja
             FROM karyawans k
             LEFT JOIN departemens d ON k.dept_id = d.id
-            LEFT JOIN jabatans j ON k.jabatan_id = j.id
             ORDER BY d.nama_dept ASC, k.nama ASC
         """)
         return jsonify({'data': cursor.fetchall()})

@@ -9,8 +9,9 @@ function EditEmployeeModal({ isOpen, onClose, employee, onSuccess }) {
         email: '',
         password: '',
         role: 'karyawan',
-        jabatan_id: '',
-        dept_id: ''
+        jabatan: '',
+        dept_id: '',
+        nomor_hp: ''
     });
     const [masterData, setMasterData] = useState({ departemens: [], jabatans: [] });
     const [isSubmitting, setIsSubmitting] = useState(false);
@@ -34,8 +35,9 @@ function EditEmployeeModal({ isOpen, onClose, employee, onSuccess }) {
                 email: employee.email || '',
                 password: '',
                 role: employee.role || 'karyawan',
-                jabatan_id: employee.jabatan_id || '',
-                dept_id: employee.dept_id || ''
+                jabatan: employee.jabatan || '',
+                dept_id: employee.dept_id || '',
+                nomor_hp: employee.nomor_hp || ''
             });
         }
     }, [employee]);
@@ -65,7 +67,7 @@ function EditEmployeeModal({ isOpen, onClose, employee, onSuccess }) {
                     <button className="close-btn" onClick={onClose}>&times;</button>
                 </div>
                 
-                <form onSubmit={handleSubmit} className="modal-body">
+                <form onSubmit={handleSubmit} className="modal-body" autoComplete="off">
                     <div className="form-grid">
                         <div className="input-group">
                             <label>Username / Nama Lengkap</label>
@@ -86,6 +88,15 @@ function EditEmployeeModal({ isOpen, onClose, employee, onSuccess }) {
                             />
                         </div>
                         <div className="input-group">
+                            <label>Nomor HP</label>
+                            <input 
+                                type="text" 
+                                value={formData.nomor_hp}
+                                onChange={(e) => setFormData({...formData, nomor_hp: e.target.value})}
+                                required
+                            />
+                        </div>
+                        <div className="input-group">
                             <label>Departemen</label>
                             <select 
                                 value={formData.dept_id}
@@ -100,16 +111,13 @@ function EditEmployeeModal({ isOpen, onClose, employee, onSuccess }) {
                         </div>
                         <div className="input-group">
                             <label>Jabatan</label>
-                            <select 
-                                value={formData.jabatan_id}
-                                onChange={(e) => setFormData({...formData, jabatan_id: e.target.value})}
+                            <input 
+                                type="text" 
+                                value={formData.jabatan}
+                                onChange={(e) => setFormData({...formData, jabatan: e.target.value})}
+                                placeholder="Cth: Manager IT"
                                 required
-                            >
-                                <option value="">-- Pilih Jabatan --</option>
-                                {masterData.jabatans.map(j => (
-                                    <option key={j.id} value={j.id}>{j.nama_jabatan}</option>
-                                ))}
-                            </select>
+                            />
                         </div>
                         <div className="input-group full-width">
                             <label>Role Akses</label>
@@ -128,6 +136,7 @@ function EditEmployeeModal({ isOpen, onClose, employee, onSuccess }) {
                                 value={formData.password}
                                 onChange={(e) => setFormData({...formData, password: e.target.value})}
                                 placeholder="Kosongkan jika tidak ingin mengubah password"
+                                autoComplete="new-password"
                             />
                         </div>
                     </div>
@@ -144,59 +153,60 @@ function EditEmployeeModal({ isOpen, onClose, employee, onSuccess }) {
             <style>{`
                 .modal-overlay {
                     position: fixed; top: 0; left: 0; right: 0; bottom: 0;
-                    background: rgba(15, 23, 42, 0.65); backdrop-filter: blur(12px);
+                    background: rgba(11, 26, 42, 0.85); backdrop-filter: blur(12px);
                     display: flex; align-items: center; justify-content: center; z-index: 2000;
                 }
                 .modal-container {
-                    background: #ffffff; width: 100%; max-width: 550px; border-radius: 24px;
-                    overflow: hidden; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.5);
-                    border: 1px solid rgba(255, 255, 255, 0.2);
+                    background: #ffffff; width: 100%; max-width: 580px; border-radius: 24px;
+                    overflow: hidden; box-shadow: 0 30px 60px rgba(0,0,0,0.4); transform: scale(0.95);
+                    animation: modalPop 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+                    border: 1px solid rgba(255, 255, 255, 0.1);
                 }
                 .modal-header {
-                    padding: 24px 30px; background: linear-gradient(to right, #f8fafc, #ffffff); 
-                    border-bottom: 1px solid #e2e8f0;
+                    padding: 28px 32px; background: linear-gradient(135deg, var(--navy-primary) 0%, #1a365d 100%); 
+                    border-bottom: 1px solid rgba(255,255,255,0.05);
                     display: flex; justify-content: space-between; align-items: center;
                 }
-                .modal-header h2 { font-size: 20px; font-weight: 800; color: var(--navy-primary); margin: 0; }
+                .modal-header h2 { font-size: 20px; font-weight: 800; color: #ffffff !important; margin: 0; letter-spacing: -0.5px; }
                 .close-btn { 
-                    background: none; border: none; font-size: 28px; color: var(--slate-muted); 
-                    cursor: pointer; transition: color 0.2s; 
+                    background: rgba(255,255,255,0.1); border: none; font-size: 18px; color: white; 
+                    width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
+                    cursor: pointer; transition: all 0.2s; 
                 }
-                .close-btn:hover { color: #dc2626; }
+                .close-btn:hover { background: rgba(255,255,255,0.2); transform: rotate(90deg); }
 
-                .modal-body { padding: 30px; }
-                .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+                .modal-body { padding: 32px; background: #fafcff; }
+                .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
                 .full-width { grid-column: span 2; }
 
-                .input-group label { display: block; font-size: 11px; font-weight: 800; color: var(--slate-muted); margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.5px; }
+                .input-group label { display: block; font-size: 11px; font-weight: 800; color: #475569; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.5px; }
                 .input-group input, .input-group select {
                     width: 100%; padding: 14px 16px; border-radius: 12px; border: 1.5px solid #e2e8f0;
-                    font-size: 14px; font-weight: 600; color: var(--navy-primary); transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-                    background-color: #f8fafc;
+                    font-size: 14px; font-weight: 600; color: #0f172a; transition: all 0.2s; box-shadow: 0 2px 4px rgba(0,0,0,0.01);
+                    background-color: #ffffff;
                 }
+                .input-group input::placeholder { color: #94a3b8; font-weight: 400; }
                 .input-group input:focus, .input-group select:focus { 
-                    border-color: var(--gold-accent); outline: none; background-color: #ffffff;
-                    box-shadow: 0 0 0 4px rgba(249, 188, 47, 0.15); 
+                    border-color: #3b82f6; outline: none; background-color: #ffffff;
+                    box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.1); 
                 }
 
-                .modal-footer { margin-top: 32px; display: flex; gap: 12px; justify-content: flex-end; }
+                .modal-footer { margin-top: 32px; display: flex; gap: 16px; justify-content: flex-end; }
                 .btn-secondary { 
-                    background: #f1f5f9; color: var(--slate-muted); border: none; padding: 12px 24px; 
-                    border-radius: 12px; font-weight: 700; cursor: pointer; transition: 0.2s;
+                    flex: 1; padding: 16px; border-radius: 12px; border: 1px solid #e2e8f0; background: #ffffff; 
+                    color: #64748b; font-weight: 800; cursor: pointer; transition: all 0.2s;
                 }
-                .btn-secondary:hover { background: #e2e8f0; color: var(--navy-primary); }
+                .btn-secondary:hover { background: #f8fafc; color: #0f172a; border-color: #cbd5e1; }
                 
                 .btn-primary { 
-                    background: linear-gradient(135deg, var(--navy-primary) 0%, #1e3a5f 100%); 
-                    color: white; border: none; padding: 12px 30px; border-radius: 12px; 
-                    font-weight: 700; cursor: pointer; transition: 0.3s;
-                    box-shadow: 0 4px 12px rgba(11, 26, 42, 0.2);
+                    flex: 2; padding: 16px; border-radius: 12px; border: none; 
+                    background: linear-gradient(135deg, var(--navy-primary), #1e40af); 
+                    color: white; font-weight: 800; cursor: pointer; transition: all 0.2s; box-shadow: 0 8px 16px rgba(30, 64, 175, 0.2);
                 }
-                .btn-primary:hover { 
-                    transform: translateY(-2px); box-shadow: 0 8px 20px rgba(11, 26, 42, 0.3); 
-                }
-                .btn-primary:disabled { opacity: 0.7; cursor: not-allowed; transform: none; box-shadow: none; }
+                .btn-primary:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 12px 20px rgba(30, 64, 175, 0.3); }
+                .btn-primary:disabled { opacity: 0.7; cursor: not-allowed; }
 
+                @keyframes modalPop { from { opacity: 0; transform: scale(0.95) translateY(20px); } to { opacity: 1; transform: scale(1) translateY(0); } }
                 @media (max-width: 600px) { .form-grid { grid-template-columns: 1fr; } .full-width { grid-column: span 1; } }
             `}</style>
         </div>

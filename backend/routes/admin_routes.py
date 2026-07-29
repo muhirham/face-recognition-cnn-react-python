@@ -1,6 +1,9 @@
 from flask import Blueprint, request, jsonify
 from utils import get_db_connection
 from datetime import datetime
+import os
+import shutil
+import traceback
 
 admin_bp = Blueprint('admin', __name__)
 
@@ -66,15 +69,14 @@ def get_employees():
                 u.email, 
                 u.role, 
                 k.kode_karyawan, 
+                k.nomor_hp,
                 k.dept_id,
-                k.jabatan_id,
+                k.jabatan,
                 d.nama_dept, 
-                j.nama_jabatan,
                 (SELECT COUNT(*) FROM face_templates ft WHERE ft.karyawan_id = k.id AND ft.status = 'aktif') as has_template
             FROM users u
             JOIN karyawans k ON u.id = k.user_id
             LEFT JOIN departemens d ON k.dept_id = d.id
-            LEFT JOIN jabatans j ON k.jabatan_id = j.id
         """)
         return jsonify({'employees': cursor.fetchall()})
     finally:
@@ -105,8 +107,8 @@ def manage_employee(user_id):
                 """, (data['username'], data['email'], data['role'], user_id))
             
             cursor.execute("""
-                UPDATE karyawans SET dept_id = %s, jabatan_id = %s, nama = %s WHERE user_id = %s
-            """, (data['dept_id'], data['jabatan_id'], data['username'], user_id))
+                UPDATE karyawans SET dept_id = %s, jabatan = %s, nama = %s, nomor_hp = %s WHERE user_id = %s
+            """, (data['dept_id'], data['jabatan'], data['username'], data.get('nomor_hp', '-'), user_id))
             
             conn.commit()
             return jsonify({'message': 'Data berhasil diperbarui'})
@@ -128,14 +130,14 @@ def manage_schedule():
             if cursor.fetchone():
                 cursor.execute("""
                     UPDATE shift_kerjas 
-                    SET jam_masuk = %s, jam_pulang = %s, toleransi_menit = %s 
+                    SET jam_masuk = %s, jam_pulang = %s, toleransi_menit = %s, nama_shift = %s
                     WHERE dept_id = %s
-                """, (data['jam_masuk'], data['jam_pulang'], data['toleransi_menit'], dept_id))
+                """, (data['jam_masuk'], data['jam_pulang'], data['toleransi_menit'], data.get('nama_shift', f"Shift {dept_id}"), dept_id))
             else:
                 cursor.execute("""
                     INSERT INTO shift_kerjas (dept_id, nama_shift, jam_masuk, jam_pulang, toleransi_menit)
                     VALUES (%s, %s, %s, %s, %s)
-                """, (dept_id, f"Shift {dept_id}", data['jam_masuk'], data['jam_pulang'], data['toleransi_menit']))
+                """, (dept_id, data.get('nama_shift', f"Shift {dept_id}"), data['jam_masuk'], data['jam_pulang'], data['toleransi_menit']))
             conn.commit()
             return jsonify({'message': 'Jadwal Departemen berhasil diperbarui'})
         
@@ -161,34 +163,6 @@ def delete_schedule(id):
         cursor.execute("DELETE FROM shift_kerjas WHERE id = %s", (id,))
         conn.commit()
         return jsonify({'message': 'Shift berhasil dihapus'})
-    finally:
-        cursor.close()
-        conn.close()
-
-@admin_bp.route('/admin/holidays', methods=['GET', 'POST'])
-def manage_holidays():
-    conn = get_db_connection()
-    cursor = conn.cursor(dictionary=True)
-    try:
-        if request.method == 'POST':
-            data = request.get_json()
-            cursor.execute("INSERT INTO hari_liburs (tanggal, keterangan) VALUES (%s, %s)", (data['tanggal'], data['keterangan']))
-            conn.commit()
-            return jsonify({'message': 'Hari libur berhasil ditambah'})
-        cursor.execute("SELECT * FROM hari_liburs ORDER BY tanggal ASC")
-        return jsonify({'holidays': cursor.fetchall()})
-    finally:
-        cursor.close()
-        conn.close()
-
-@admin_bp.route('/admin/holidays/<int:id>', methods=['DELETE'])
-def delete_holiday(id):
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    try:
-        cursor.execute("DELETE FROM hari_liburs WHERE id = %s", (id,))
-        conn.commit()
-        return jsonify({'message': 'Hari libur dihapus'})
     finally:
         cursor.close()
         conn.close()
@@ -219,11 +193,9 @@ def get_master_data():
     try:
         cursor.execute("SELECT id, nama_dept FROM departemens")
         depts = cursor.fetchall()
-        cursor.execute("SELECT id, nama_jabatan FROM jabatans")
-        jabs = cursor.fetchall()
         cursor.execute("SELECT id, nama_shift FROM shift_kerjas")
         shifts = cursor.fetchall()
-        return jsonify({'departemens': depts, 'jabatans': jabs, 'shifts': shifts})
+        return jsonify({'departemens': depts, 'shifts': shifts})
     finally:
         cursor.close()
         conn.close()
@@ -264,38 +236,54 @@ def manage_dept_item(id):
         cursor.close()
         conn.close()
 
-@admin_bp.route('/admin/jabatans', methods=['GET', 'POST'])
-def manage_jabatans():
+@admin_bp.route('/admin/datasets', methods=['GET'])
+def get_datasets():
     conn = get_db_connection()
     cursor = conn.cursor(dictionary=True)
     try:
-        if request.method == 'POST':
-            data = request.get_json()
-            cursor.execute("INSERT INTO jabatans (nama_jabatan) VALUES (%s)", (data['nama_jabatan'],))
-            conn.commit()
-            return jsonify({'message': 'Jabatan berhasil ditambah'})
-            
-        cursor.execute("SELECT id, nama_jabatan FROM jabatans")
-        return jsonify({'jabatans': cursor.fetchall()})
+        cursor.execute("""
+            SELECT 
+                k.id as karyawan_id, 
+                k.nama, 
+                k.kode_karyawan,
+                k.foto_referensi,
+                d.nama_dept,
+                COUNT(ft.id) as total_citra,
+                MAX(ft.tanggal_perekaman) as terakhir_perekaman
+            FROM karyawans k
+            LEFT JOIN departemens d ON k.dept_id = d.id
+            JOIN face_templates ft ON k.id = ft.karyawan_id
+            GROUP BY k.id
+        """)
+        return jsonify({'datasets': cursor.fetchall()})
     finally:
         cursor.close()
         conn.close()
 
-@admin_bp.route('/admin/jabatans/<int:id>', methods=['PUT', 'DELETE'])
-def manage_jabatan_item(id):
+@admin_bp.route('/admin/datasets/<int:karyawan_id>', methods=['DELETE'])
+def delete_dataset(karyawan_id):
     conn = get_db_connection()
-    cursor = conn.cursor()
+    cursor = conn.cursor(dictionary=True)
     try:
-        if request.method == 'DELETE':
-            cursor.execute("DELETE FROM jabatans WHERE id = %s", (id,))
-            conn.commit()
-            return jsonify({'message': 'Jabatan berhasil dihapus'})
-            
-        elif request.method == 'PUT':
-            data = request.get_json()
-            cursor.execute("UPDATE jabatans SET nama_jabatan = %s WHERE id = %s", (data['nama_jabatan'], id))
-            conn.commit()
-            return jsonify({'message': 'Jabatan berhasil diperbarui'})
+        # Get kode_karyawan to delete the folder
+        cursor.execute("SELECT kode_karyawan FROM karyawans WHERE id = %s", (karyawan_id,))
+        emp = cursor.fetchone()
+        
+        cursor.execute("DELETE FROM face_templates WHERE karyawan_id = %s", (karyawan_id,))
+        conn.commit()
+        
+        # Delete the dataset folder if exists
+        if emp:
+            datasets_dir = os.path.join(os.path.dirname(__file__), '..', 'static', 'datasets')
+            emp_folder = os.path.join(datasets_dir, emp['kode_karyawan'])
+            if os.path.exists(emp_folder):
+                shutil.rmtree(emp_folder)
+        
+        # Reload cache setelah dataset dihapus
+        from utils import load_face_cache
+        load_face_cache()
+        
+        return jsonify({'message': 'Dataset wajah berhasil dihapus! Karyawan harus mendaftar ulang wajahnya.'})
     finally:
         cursor.close()
         conn.close()

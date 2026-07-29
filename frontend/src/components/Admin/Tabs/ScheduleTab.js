@@ -11,7 +11,7 @@ function ScheduleTab() {
 
     const [searchTermShift, setSearchTermShift] = useState('');
     const [currentPageShift, setCurrentPageShift] = useState(1);
-    const ITEMS_PER_PAGE_SHIFT = 5;
+    const [itemsPerPageShift, setItemsPerPageShift] = useState(10);
 
     const [newShift, setNewShift] = useState({
         dept_id: '',
@@ -75,8 +75,8 @@ function ScheduleTab() {
         (s.nama_dept && s.nama_dept.toLowerCase().includes(searchTermShift.toLowerCase())) ||
         (s.nama_shift && s.nama_shift.toLowerCase().includes(searchTermShift.toLowerCase()))
     );
-    const totalPagesShift = Math.ceil(filteredShifts.length / ITEMS_PER_PAGE_SHIFT);
-    const currentShifts = filteredShifts.slice((currentPageShift - 1) * ITEMS_PER_PAGE_SHIFT, currentPageShift * ITEMS_PER_PAGE_SHIFT);
+    const totalPagesShift = Math.ceil(filteredShifts.length / itemsPerPageShift);
+    const currentShifts = filteredShifts.slice((currentPageShift - 1) * itemsPerPageShift, currentPageShift * itemsPerPageShift);
 
     return (
         <div className="tab-view-container animate-fade-in">
@@ -156,9 +156,19 @@ function ScheduleTab() {
                             </table>
                         </div>
                         
-                        {totalPagesShift > 1 && (
-                            <div className="pagination-controls">
-                                <span className="pagination-info">Halaman {currentPageShift} dari {totalPagesShift}</span>
+                        {filteredShifts.length > 0 && (
+                            <div className="pagination-controls" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '16px' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                                    <span className="pagination-info">Halaman {currentPageShift} dari {totalPagesShift}</span>
+                                    <select 
+                                        value={itemsPerPageShift} 
+                                        onChange={(e) => { setItemsPerPageShift(Number(e.target.value)); setCurrentPageShift(1); }}
+                                        style={{ padding: '6px', borderRadius: '6px', border: '1px solid #e2e8f0' }}
+                                    >
+                                        <option value={10}>10 Baris</option>
+                                        <option value={20}>20 Baris</option>
+                                    </select>
+                                </div>
                                 <div className="pagination-buttons">
                                     <button className="btn-page" disabled={currentPageShift === 1} onClick={() => setCurrentPageShift(p => p - 1)}>Prev</button>
                                     <button className="btn-page" disabled={currentPageShift === totalPagesShift} onClick={() => setCurrentPageShift(p => p + 1)}>Next</button>

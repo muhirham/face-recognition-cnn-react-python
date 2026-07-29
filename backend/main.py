@@ -26,6 +26,11 @@ app.register_blueprint(holiday_bp)
 def serve_photo(filename):
     return send_from_directory(UPLOAD_FOLDER, filename)
 
+@app.route('/static/datasets/<emp_code>/<filename>')
+def serve_dataset(emp_code, filename):
+    dataset_dir = os.path.join(os.path.dirname(__file__), 'static', 'datasets', emp_code)
+    return send_from_directory(dataset_dir, filename)
+
 if __name__ == '__main__':
     print("[*] Starting Production Server (Waitress WSGI) on 0.0.0.0:5000")
     from waitress import serve

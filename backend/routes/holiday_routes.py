@@ -1,5 +1,7 @@
 from flask import Blueprint, request, jsonify
 from utils import get_db_connection
+import holidays
+from datetime import datetime
 
 holiday_bp = Blueprint('holiday', __name__)
 
@@ -29,9 +31,34 @@ def add_holiday():
     conn = get_db_connection()
     cursor = conn.cursor()
     try:
-        cursor.execute("INSERT INTO holidays (tanggal, keterangan) VALUES (%s, %s)", (tanggal, keterangan))
+        cursor.execute("INSERT INTO holidays (tanggal, keterangan) VALUES (%s, %s)", (data['tanggal'], data['keterangan']))
         conn.commit()
-        return jsonify({'message': 'Hari libur berhasil ditambahkan'}), 201
+        return jsonify({'message': 'Hari libur berhasil ditambah'}), 201
+    except Exception as e:
+        return jsonify({'message': f"Error: {str(e)}"}), 500
+    finally:
+        cursor.close()
+        conn.close()
+
+@holiday_bp.route('/admin/holidays/sync', methods=['POST'])
+def sync_holidays():
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    try:
+        current_year = datetime.now().year
+        id_holidays = holidays.ID(years=current_year)
+        
+        added_count = 0
+        for dt, name in id_holidays.items():
+            date_str = dt.strftime('%Y-%m-%d')
+            # Check if exists
+            cursor.execute("SELECT id FROM holidays WHERE tanggal = %s", (date_str,))
+            if not cursor.fetchone():
+                cursor.execute("INSERT INTO holidays (tanggal, keterangan) VALUES (%s, %s)", (date_str, name))
+                added_count += 1
+                
+        conn.commit()
+        return jsonify({'message': f'Berhasil sinkronisasi. {added_count} libur nasional ditambahkan.'}), 200
     except Exception as e:
         return jsonify({'message': f"Error: {str(e)}"}), 500
     finally:

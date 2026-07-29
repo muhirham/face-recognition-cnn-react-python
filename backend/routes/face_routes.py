@@ -6,6 +6,10 @@ import numpy as np
 import cv2
 import json
 import traceback
+import shutil
+
+# Base directory for static datasets
+DATASETS_DIR = os.path.join(os.path.dirname(__file__), '..', 'static', 'datasets')
 
 face_bp = Blueprint('face', __name__)
 
@@ -33,6 +37,12 @@ def register_face():
 
         cursor.execute("DELETE FROM face_templates WHERE karyawan_id = %s", (employee_id,))
         
+        # Buat folder khusus karyawan (format: EMPXXXX)
+        emp_folder = os.path.join(DATASETS_DIR, emp_code)
+        if os.path.exists(emp_folder):
+            shutil.rmtree(emp_folder)
+        os.makedirs(emp_folder, exist_ok=True)
+        
         saved_count = 0
         for i, img_base64 in enumerate(images):
             try:
@@ -50,6 +60,14 @@ def register_face():
                         VALUES (%s, %s, 'aktif')
                     """, (employee_id, vector_json))
                     saved_count += 1
+                    
+                    # Resize proportionally to save space
+                    h, w = img.shape[:2]
+                    scale = 250 / max(h, w)
+                    new_w, new_h = int(w * scale), int(h * scale)
+                    img_thumb = cv2.resize(img, (new_w, new_h))
+                    img_path = os.path.join(emp_folder, f"{saved_count}.jpg")
+                    cv2.imwrite(img_path, img_thumb)
             except Exception as e:
                 print(f"Error processing image {i}: {e}")
 

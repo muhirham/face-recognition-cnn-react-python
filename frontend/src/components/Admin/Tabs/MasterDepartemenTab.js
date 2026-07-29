@@ -17,7 +17,7 @@ function MasterDepartemenTab() {
 
     const [searchTerm, setSearchTerm] = useState('');
     const [currentPage, setCurrentPage] = useState(1);
-    const ITEMS_PER_PAGE = 5;
+    const [itemsPerPage, setItemsPerPage] = useState(10);
 
     const fetchData = async () => {
         setIsLoading(true);
@@ -86,8 +86,8 @@ function MasterDepartemenTab() {
     }
 
     const filteredDepartments = departments.filter(d => d.nama_dept.toLowerCase().includes(searchTerm.toLowerCase()));
-    const totalPages = Math.ceil(filteredDepartments.length / ITEMS_PER_PAGE);
-    const currentDepartments = filteredDepartments.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE);
+    const totalPages = Math.ceil(filteredDepartments.length / itemsPerPage);
+    const currentDepartments = filteredDepartments.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
 
     return (
         <div className="tab-view-container animate-fade-in">
@@ -142,9 +142,19 @@ function MasterDepartemenTab() {
                             )) : <p className="empty-p">Belum ada data yang sesuai.</p>}
                         </div>
                         
-                        {totalPages > 1 && (
-                            <div className="pagination-controls">
-                                <span className="pagination-info">Halaman {currentPage} dari {totalPages}</span>
+                        {filteredDepartments.length > 0 && (
+                            <div className="pagination-controls" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '16px' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                                    <span className="pagination-info">Halaman {currentPage} dari {totalPages}</span>
+                                    <select 
+                                        value={itemsPerPage} 
+                                        onChange={(e) => { setItemsPerPage(Number(e.target.value)); setCurrentPage(1); }}
+                                        style={{ padding: '6px', borderRadius: '6px', border: '1px solid #e2e8f0' }}
+                                    >
+                                        <option value={10}>10 Baris</option>
+                                        <option value={20}>20 Baris</option>
+                                    </select>
+                                </div>
                                 <div className="pagination-buttons">
                                     <button className="btn-page" disabled={currentPage === 1} onClick={() => setCurrentPage(p => p - 1)}>Prev</button>
                                     <button className="btn-page" disabled={currentPage === totalPages} onClick={() => setCurrentPage(p => p + 1)}>Next</button>

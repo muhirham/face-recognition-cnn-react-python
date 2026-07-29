@@ -206,7 +206,7 @@ function ReportsTab({ reportType }) {
     const getReportHeader = () => {
         switch(activeReport) {
             case 'daily':
-                return { title: 'Laporan Kehadiran Harian', desc: 'Menyajikan data riwayat presensi harian karyawan.' };
+                return { title: 'Laporan Kehadiran', desc: 'Menyajikan data riwayat presensi karyawan.' };
             case 'monthly':
                 return { title: 'Rekapitulasi Absensi Bulanan', desc: 'Laporan akumulasi kehadiran, keterlambatan, dan tingkat absensi karyawan per bulan.' };
             case 'late':
@@ -271,16 +271,28 @@ function ReportsTab({ reportType }) {
             {reportData && (
                 <div className="print-area">
                     <div className="print-header">
-                        <h2>PT INTERTEL MEDIA PRIMA</h2>
-                        <h3>
-                            {activeReport === 'daily' && `LAPORAN KEHADIRAN HARIAN (${reportData.date})`}
+                        <div className="kop-surat">
+                            <div className="kop-logo">
+                                {/* Using the imprima logo, it should be in public/imprima.png */}
+                                <img src="/imprima.png" alt="Logo IMP" />
+                            </div>
+                            <div className="kop-text">
+                                <h1>PT INTERTEL MEDIA PRIMA</h1>
+                                <p>Jl. RS. Fatmawati Raya No.15, RT.10/RW.2, Gandaria Sel., Kec. Cilandak</p>
+                                <p>Kota Jakarta Selatan, Daerah Khusus Ibukota Jakarta 12420</p>
+                            </div>
+                        </div>
+                        <hr className="kop-divider" />
+                        
+                        <h3 className="report-title-print">
+                            {activeReport === 'daily' && `LAPORAN KEHADIRAN (${reportData.date})`}
                             {activeReport === 'monthly' && `REKAPITULASI ABSENSI BULANAN (Bulan ${reportData.month}/${reportData.year})`}
                             {activeReport === 'late' && `EVALUASI KETERLAMBATAN KARYAWAN (Bulan ${reportData.month}/${reportData.year})`}
                             {activeReport === 'early' && `LAPORAN KARYAWAN PULANG AWAL (Bulan ${reportData.month}/${reportData.year})`}
                             {activeReport === 'employees' && `MASTER DATA KARYAWAN AKTIF`}
                         </h3>
                         {activeReport === 'monthly' && (
-                            <p>Total Hari Efektif (Tanpa Libur/Weekend): <strong>{reportData.effective_days} Hari</strong></p>
+                            <p style={{ textAlign: 'center', marginBottom: '20px' }}>Total Hari Efektif (Tanpa Libur/Weekend): <strong>{reportData.effective_days} Hari</strong></p>
                         )}
                     </div>
                     

@@ -11,11 +11,20 @@ function HolidayTab() {
 
     const [newHoliday, setNewHoliday] = useState({ tanggal: '', keterangan: '' });
 
+    const [currentPage, setCurrentPage] = useState(1);
+    const [itemsPerPage, setItemsPerPage] = useState(10);
+
     const fetchData = async () => {
         setIsLoading(true);
         try {
             const res = await axios.get(`${API_BASE_URL}/admin/holidays`);
-            setHolidays(res.data || []);
+            if (Array.isArray(res.data)) {
+                setHolidays(res.data);
+            } else if (res.data && Array.isArray(res.data.holidays)) {
+                setHolidays(res.data.holidays);
+            } else {
+                setHolidays([]);
+            }
         } catch (err) {
             console.error("Gagal load holiday data", err);
         } finally {
@@ -37,6 +46,18 @@ function HolidayTab() {
         } catch (err) { toast.error("Gagal menambah hari libur"); }
     };
 
+    const handleSyncHolidays = async () => {
+        setIsLoading(true);
+        try {
+            const res = await axios.post(`${API_BASE_URL}/admin/holidays/sync`);
+            toast.success(res.data.message || "Sinkronisasi berhasil");
+            fetchData();
+        } catch (err) { 
+            toast.error("Gagal sinkronisasi libur nasional");
+            setIsLoading(false);
+        }
+    };
+
     const handleDeleteHoliday = async () => {
         if (!deleteConfirmHoliday) return;
         try {
@@ -50,6 +71,10 @@ function HolidayTab() {
     if (isLoading) {
         return <div style={{padding: '40px', fontWeight: '800'}}>Memuat Master Hari Libur...</div>;
     }
+
+    const holidayList = Array.isArray(holidays) ? holidays : [];
+    const totalPages = Math.ceil(holidayList.length / itemsPerPage);
+    const currentHolidays = holidayList.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
 
     return (
         <div className="tab-view-container animate-fade-in">
@@ -73,7 +98,10 @@ function HolidayTab() {
                                 <label>Keterangan Libur</label>
                                 <input type="text" placeholder="Misal: Idul Fitri, Hari Kemerdekaan" value={newHoliday.keterangan} onChange={(e) => setNewHoliday({...newHoliday, keterangan: e.target.value})} required />
                             </div>
-                            <button type="submit" className="btn-add-holiday">Simpan Hari Libur</button>
+                            <div style={{ display: 'flex', gap: '10px' }}>
+                                <button type="submit" className="btn-add-holiday" style={{ flex: 1 }}>Simpan Libur</button>
+                                <button type="button" onClick={handleSyncHolidays} className="btn-add-holiday" style={{ flex: 1, backgroundColor: '#10b981' }}>🔄 Auto Sync</button>
+                            </div>
                         </form>
                     </div>
                 </div>
@@ -84,7 +112,7 @@ function HolidayTab() {
                     </div>
                     <div className="card-p-body list-body">
                         <div className="holiday-list-p">
-                            {holidays.length > 0 ? holidays.map(h => (
+                            {currentHolidays.length > 0 ? currentHolidays.map(h => (
                                 <div key={h.id} className="holiday-item-p">
                                     <div className="h-meta">
                                         <span className="h-date">{new Date(h.tanggal).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}</span>
@@ -103,6 +131,26 @@ function HolidayTab() {
                                 </div>
                             )}
                         </div>
+                        
+                        {holidayList.length > 0 && (
+                            <div className="pagination-controls" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '16px', padding: '0 8px' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                                    <span className="pagination-info">Halaman {currentPage} dari {totalPages}</span>
+                                    <select 
+                                        value={itemsPerPage} 
+                                        onChange={(e) => { setItemsPerPage(Number(e.target.value)); setCurrentPage(1); }}
+                                        style={{ padding: '6px', borderRadius: '6px', border: '1px solid #e2e8f0' }}
+                                    >
+                                        <option value={10}>10 Baris</option>
+                                        <option value={20}>20 Baris</option>
+                                    </select>
+                                </div>
+                                <div className="pagination-buttons">
+                                    <button className="btn-page" disabled={currentPage === 1} onClick={() => setCurrentPage(p => p - 1)} style={{marginRight: '5px', padding: '6px 12px', border: '1px solid #e2e8f0', borderRadius: '6px', background: 'white', cursor: 'pointer'}}>Prev</button>
+                                    <button className="btn-page" disabled={currentPage === totalPages} onClick={() => setCurrentPage(p => p + 1)} style={{padding: '6px 12px', border: '1px solid #e2e8f0', borderRadius: '6px', background: 'white', cursor: 'pointer'}}>Next</button>
+                                </div>
+                            </div>
+                        )}
                     </div>
                 </div>
             </div>

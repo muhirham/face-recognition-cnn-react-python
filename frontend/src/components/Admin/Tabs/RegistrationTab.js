@@ -3,6 +3,7 @@ import Webcam from 'react-webcam';
 import axios from 'axios';
 import API_BASE_URL from '../../../apiConfig';
 import { toast } from 'react-toastify';
+import Select from 'react-select';
 
 function RegistrationTab() {
     const [employees, setEmployees] = useState([]);
@@ -19,7 +20,6 @@ function RegistrationTab() {
     
     const [isRegistering, setIsRegistering] = useState(false);
     const [hasTemplate, setHasTemplate] = useState(false);
-    const [existingDataset, setExistingDataset] = useState([]);
     const [deleteConfirm, setDeleteConfirm] = useState(false);
 
     const webcamRef = useRef(null);
@@ -37,13 +37,6 @@ function RegistrationTab() {
         }
     };
 
-    const fetchExistingDataset = async (empId) => {
-        try {
-            const res = await axios.get(`${API_BASE_URL}/admin/get_dataset/${empId}`);
-            setExistingDataset(res.data.images || []);
-        } catch (err) { console.error("Gagal load dataset", err); }
-    };
-
     useEffect(() => {
         fetchData();
     }, []);
@@ -52,18 +45,12 @@ function RegistrationTab() {
     useEffect(() => {
         if (!selectedEmployee) {
             setHasTemplate(false);
-            setExistingDataset([]);
             return;
         }
         const checkTemplate = async () => {
             try {
                 const res = await axios.get(`${API_BASE_URL}/admin/check_template/${selectedEmployee}`);
                 setHasTemplate(res.data.exists);
-                if (res.data.exists) {
-                    fetchExistingDataset(selectedEmployee);
-                } else {
-                    setExistingDataset([]);
-                }
             } catch (err) { console.error(err); }
         };
         checkTemplate();
@@ -74,7 +61,6 @@ function RegistrationTab() {
             await axios.delete(`${API_BASE_URL}/admin/delete_dataset/${selectedEmployee}`);
             toast.success("Dataset berhasil dihapus!");
             setHasTemplate(false);
-            setExistingDataset([]);
             setCapturedImages([]);
             setDeleteConfirm(false);
         } catch (err) {
@@ -284,19 +270,26 @@ function RegistrationTab() {
                         <div className="card-p-body">
                             <div className="form-group-p">
                                 <label>Pilih Karyawan</label>
-                                <select 
-                                    value={selectedEmployee} 
-                                    onChange={(e) => setSelectedEmployee(e.target.value)}
-                                    className="full-select"
-                                    disabled={isScanning || capturedImages.length > 0}
-                                >
-                                    <option value="">-- Pilih Nama Karyawan --</option>
-                                    {employees.map(emp => (
-                                        <option key={emp.id} value={emp.id}>
-                                            {emp.nama} ({emp.kode_karyawan})
-                                        </option>
-                                    ))}
-                                </select>
+                                <Select 
+                                    value={selectedEmployee ? { value: selectedEmployee, label: employees.find(e => e.id === selectedEmployee)?.nama + ' (' + employees.find(e => e.id === selectedEmployee)?.kode_karyawan + ')' } : null}
+                                    onChange={(selectedOption) => setSelectedEmployee(selectedOption ? selectedOption.value : '')}
+                                    options={employees.map(emp => ({ value: emp.id, label: `${emp.nama} (${emp.kode_karyawan})` }))}
+                                    isDisabled={isScanning || capturedImages.length > 0}
+                                    placeholder="-- Cari Nama Karyawan --"
+                                    isClearable
+                                    styles={{
+                                        control: (base) => ({
+                                            ...base,
+                                            padding: '4px',
+                                            borderRadius: '12px',
+                                            borderColor: '#e2e8f0',
+                                            background: '#f8fafc',
+                                            fontSize: '14px',
+                                            fontWeight: '600'
+                                        }),
+                                        menu: (base) => ({ ...base, zIndex: 9999 })
+                                    }}
+                                />
                             </div>
 
                             {hasTemplate && (
@@ -305,19 +298,9 @@ function RegistrationTab() {
                                         ✅ Karyawan ini sudah memiliki data wajah (20 Vektor CNN).
                                     </div>
                                     <div className="dataset-gallery-preview">
-                                        {existingDataset && existingDataset.length > 0 && (
-                                            <>
-                                                <h4>Preview Dataset Saat Ini</h4>
-                                                <div className="gallery-scroll-x">
-                                                    {existingDataset.map((imgUrl, i) => (
-                                                        <img key={i} src={`${API_BASE_URL}${imgUrl}`} alt={`dataset-${i}`} className="gallery-thumb" />
-                                                    ))}
-                                                </div>
-                                            </>
-                                        )}
-                                        <button className="btn-delete-reset" onClick={() => setDeleteConfirm(true)}>
-                                            🗑️ Hapus & Reset Dataset
-                                        </button>
+                                        <p style={{ fontSize: '13px', color: '#64748b', marginBottom: '12px', fontStyle: 'italic' }}>
+                                            *Preview foto dinonaktifkan karena sistem hanya menyimpan vektor matematis (embedding) untuk menghemat penyimpanan server.
+                                        </p>
                                     </div>
                                 </div>
                             )}

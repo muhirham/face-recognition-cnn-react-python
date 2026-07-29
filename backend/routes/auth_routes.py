@@ -34,7 +34,7 @@ def register():
         username = data.get('username')
         password = data.get('password', '123456')
         dept_id = data.get('dept_id') if data.get('dept_id') else None
-        jab_id = data.get('jabatan_id') if data.get('jabatan_id') else None
+        jabatan_str = data.get('jabatan', '')
         role = data.get('role', 'karyawan')
         
         if not email or not username:
@@ -50,11 +50,11 @@ def register():
         """, (username, email, password, username, role))
         user_id = cursor.lastrowid
         
-        kode_kry = 'KRY-' + ''.join(random.choices(string.digits, k=4))
+        kode_kry = 'EMP' + ''.join(random.choices(string.digits, k=5))
         cursor.execute("""
-            INSERT INTO karyawans (user_id, dept_id, jabatan_id, kode_karyawan, nama) 
-            VALUES (%s, %s, %s, %s, %s)
-        """, (user_id, dept_id, jab_id, kode_kry, username))
+            INSERT INTO karyawans (user_id, dept_id, jabatan, kode_karyawan, nama, nomor_hp) 
+            VALUES (%s, %s, %s, %s, %s, %s)
+        """, (user_id, dept_id, jabatan_str, kode_kry, username, data.get('nomor_hp', '-')))
         
         conn.commit()
         return jsonify({
@@ -88,11 +88,11 @@ def get_greeting():
                 k.kode_karyawan, 
                 k.nama, 
                 k.status_kerja,
+                k.dept_id,
                 d.nama_dept, 
-                j.nama_jabatan 
+                k.jabatan
             FROM karyawans k
             LEFT JOIN departemens d ON k.dept_id = d.id
-            LEFT JOIN jabatans j ON k.jabatan_id = j.id
             WHERE k.user_id = %s
         """, (user_id,))
         karyawan = cursor.fetchone()
@@ -106,7 +106,7 @@ def get_greeting():
             'nama': karyawan['nama'] if karyawan else base_user['username'],
             'role': base_user['role'],
             'nama_dept': karyawan['nama_dept'] if karyawan else 'Administrator',
-            'nama_jabatan': karyawan['nama_jabatan'] if karyawan else 'Super Admin',
+            'nama_jabatan': karyawan['jabatan'] if karyawan else 'Super Admin',
             'min_confidence': min_conf
         }
         
@@ -116,6 +116,16 @@ def get_greeting():
         holiday = cursor.fetchone()
         response_data['holiday'] = holiday['keterangan'] if holiday else None
         
+        if karyawan and karyawan.get('dept_id'):
+            cursor.execute("SELECT jam_masuk, jam_pulang, toleransi_menit FROM shift_kerjas WHERE dept_id = %s LIMIT 1", (karyawan['dept_id'],))
+            shift = cursor.fetchone()
+            if shift:
+                response_data['schedule'] = {
+                    'jam_masuk': str(shift['jam_masuk']),
+                    'jam_pulang': str(shift['jam_pulang']),
+                    'toleransi_menit': shift['toleransi_menit']
+                }
+
         return jsonify(response_data)
     finally:
         cursor.close()

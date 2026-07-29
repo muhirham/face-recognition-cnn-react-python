@@ -9,8 +9,9 @@ function EnrollmentModal({ isOpen, onClose, onSuccess }) {
         email: '',
         password: '',
         dept_id: '',
-        jabatan_id: '',
-        role: 'karyawan'
+        jabatan: '',
+        role: 'karyawan',
+        nomor_hp: ''
     });
     const [masterData, setMasterData] = useState({ departemens: [], jabatans: [] });
     const [isSaving, setIsSaving] = useState(false);
@@ -41,7 +42,7 @@ function EnrollmentModal({ isOpen, onClose, onSuccess }) {
             toast.success(response.data.message);
             onSuccess();
             onClose();
-            setFormData({ username: '', email: '', password: '', dept_id: '', jabatan_id: '', role: 'karyawan' });
+            setFormData({ username: '', email: '', password: '', dept_id: '', jabatan: '', role: 'karyawan', nomor_hp: '' });
         } catch (error) {
             toast.error(error.response?.data?.message || "Gagal mendaftarkan karyawan");
         } finally {
@@ -63,23 +64,28 @@ function EnrollmentModal({ isOpen, onClose, onSuccess }) {
                     <button className="btn-close-p" onClick={onClose}>&times;</button>
                 </div>
 
-                <form onSubmit={handleSubmit} className="modal-body-p">
+                <form onSubmit={handleSubmit} className="modal-body-p" autoComplete="off">
                     <h3>Data Personal Karyawan</h3>
                     <p className="sub-hint">Masukkan informasi dasar karyawan. Data wajah dapat didaftarkan nanti melalui menu pendaftaran wajah.</p>
 
                     <div className="form-group-p">
                         <label>NAMA LENGKAP</label>
-                        <input type="text" name="username" value={formData.username} onChange={handleInputChange} placeholder="Nama Lengkap" required />
+                        <input type="text" name="username" value={formData.username} onChange={handleInputChange} placeholder="Nama Lengkap" required autoComplete="off" />
+                    </div>
+
+                    <div className="form-group-p">
+                        <label>NOMOR HP</label>
+                        <input type="text" name="nomor_hp" value={formData.nomor_hp} onChange={handleInputChange} placeholder="08123456789" required autoComplete="off" />
                     </div>
 
                     <div className="form-group-p">
                         <label>EMAIL PERUSAHAAN</label>
-                        <input type="email" name="email" value={formData.email} onChange={handleInputChange} placeholder="email@perusahaan.com" required />
+                        <input type="email" name="email" value={formData.email} onChange={handleInputChange} placeholder="email@perusahaan.com" required autoComplete="off" />
                     </div>
 
                     <div className="form-group-p">
                         <label>PASSWORD AWAL</label>
-                        <input type="password" name="password" value={formData.password} onChange={handleInputChange} placeholder="Minimal 6 karakter" required />
+                        <input type="password" name="password" value={formData.password} onChange={handleInputChange} placeholder="Minimal 6 karakter" required autoComplete="new-password" />
                     </div>
 
                     <div className="form-row-p">
@@ -94,12 +100,14 @@ function EnrollmentModal({ isOpen, onClose, onSuccess }) {
                         </div>
                         <div className="form-group-p flex-1">
                             <label>JABATAN</label>
-                            <select name="jabatan_id" value={formData.jabatan_id} onChange={handleInputChange} required>
-                                <option value="">-- Pilih --</option>
-                                {masterData.jabatans.map(j => (
-                                    <option key={j.id} value={j.id}>{j.nama_jabatan}</option>
-                                ))}
-                            </select>
+                            <input 
+                                type="text" 
+                                name="jabatan" 
+                                value={formData.jabatan} 
+                                onChange={handleInputChange} 
+                                placeholder="Cth: Staff IT" 
+                                required 
+                            />
                         </div>
                     </div>
 
@@ -121,32 +129,36 @@ function EnrollmentModal({ isOpen, onClose, onSuccess }) {
             </div>
 
             <style>{`
-                .modal-overlay-p { position: fixed; inset: 0; background: rgba(11, 26, 42, 0.8); backdrop-filter: blur(8px); z-index: 1000; display: flex; align-items: center; justify-content: center; }
-                .modal-content-p { background: white; width: 100%; max-width: 550px; border-radius: 20px; overflow: hidden; box-shadow: 0 25px 50px rgba(0,0,0,0.3); }
+                .modal-overlay-p { position: fixed; inset: 0; background: rgba(11, 26, 42, 0.85); backdrop-filter: blur(12px); z-index: 1000; display: flex; align-items: center; justify-content: center; }
+                .modal-content-p { background: #ffffff; width: 100%; max-width: 580px; border-radius: 24px; overflow: hidden; box-shadow: 0 30px 60px rgba(0,0,0,0.4); transform: scale(0.95); animation: modalPop 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards; border: 1px solid rgba(255,255,255,0.1); }
                 
-                .modal-header-p { background: var(--navy-primary); color: white; padding: 24px; display: flex; align-items: center; gap: 16px; position: relative; }
-                .header-icon { background: var(--gold-accent); color: var(--navy-primary); padding: 8px 12px; border-radius: 8px; font-weight: 900; }
-                .header-text h2 { font-size: 18px; font-weight: 800; margin: 0; }
-                .header-text p { font-size: 11px; opacity: 0.7; margin: 0; }
-                .btn-close-p { position: absolute; right: 24px; top: 24px; background: none; border: none; color: white; font-size: 24px; cursor: pointer; }
+                .modal-header-p { background: linear-gradient(135deg, var(--navy-primary) 0%, #1a365d 100%); color: white; padding: 28px 32px; display: flex; align-items: center; gap: 20px; position: relative; border-bottom: 1px solid rgba(255,255,255,0.05); }
+                .header-icon { background: linear-gradient(135deg, var(--gold-accent), #f59e0b); color: var(--navy-primary); padding: 10px 14px; border-radius: 12px; font-weight: 900; font-size: 16px; box-shadow: 0 4px 12px rgba(245, 158, 11, 0.3); }
+                .header-text h2 { font-size: 20px; font-weight: 800; margin: 0; letter-spacing: -0.5px; color: #ffffff !important; }
+                .header-text p { font-size: 12px; opacity: 0.8; margin: 4px 0 0 0; font-weight: 500; color: #ffffff !important; }
+                .btn-close-p { position: absolute; right: 28px; top: 32px; background: rgba(255,255,255,0.1); border: none; color: white; width: 32px; height: 32px; border-radius: 50%; font-size: 18px; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: all 0.2s; }
+                .btn-close-p:hover { background: rgba(255,255,255,0.2); transform: rotate(90deg); }
 
-                .modal-body-p { padding: 32px; display: flex; flex-direction: column; gap: 20px; }
-                .modal-body-p h3 { font-size: 20px; font-weight: 800; margin: 0; }
-                .sub-hint { font-size: 12px; color: var(--slate-muted); line-height: 1.6; margin-top: -10px; }
+                .modal-body-p { padding: 32px; display: flex; flex-direction: column; gap: 24px; background: #fafcff; }
+                .modal-body-p h3 { font-size: 18px; font-weight: 800; margin: 0; color: var(--navy-primary); }
+                .sub-hint { font-size: 13px; color: #64748b; line-height: 1.6; margin-top: -16px; }
 
                 .form-group-p { display: flex; flex-direction: column; gap: 8px; }
                 .form-row-p { display: flex; gap: 20px; }
                 .flex-1 { flex: 1; }
-                .form-group-p label { font-size: 11px; font-weight: 800; color: var(--navy-primary); }
-                .form-group-p input, .form-group-p select { padding: 14px; border-radius: 12px; border: 1.5px solid #eef2f6; background: #f8fafc; font-weight: 700; font-size: 14px; }
-                .form-group-p input:focus, .form-group-p select:focus { border-color: var(--navy-primary); background: white; outline: none; }
+                .form-group-p label { font-size: 11px; font-weight: 800; color: #475569; text-transform: uppercase; letter-spacing: 0.5px; }
+                .form-group-p input, .form-group-p select { padding: 14px 16px; border-radius: 12px; border: 1.5px solid #e2e8f0; background: #ffffff; font-weight: 600; font-size: 14px; color: #0f172a; transition: all 0.2s; box-shadow: 0 2px 4px rgba(0,0,0,0.01); }
+                .form-group-p input::placeholder { color: #94a3b8; font-weight: 400; }
+                .form-group-p input:focus, .form-group-p select:focus { border-color: #3b82f6; background: #ffffff; outline: none; box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.1); }
 
-                .modal-footer-p { display: flex; gap: 16px; margin-top: 20px; }
-                .btn-cancel-p { flex: 1; padding: 14px; border-radius: 12px; border: none; background: #f1f5f9; color: var(--slate-muted); font-weight: 800; cursor: pointer; }
-                .btn-submit-p { flex: 2; padding: 14px; border-radius: 12px; border: none; background: var(--navy-primary); color: white; font-weight: 800; cursor: pointer; }
+                .modal-footer-p { display: flex; gap: 16px; margin-top: 10px; }
+                .btn-cancel-p { flex: 1; padding: 16px; border-radius: 12px; border: 1px solid #e2e8f0; background: #ffffff; color: #64748b; font-weight: 800; cursor: pointer; transition: all 0.2s; }
+                .btn-cancel-p:hover { background: #f8fafc; color: #0f172a; border-color: #cbd5e1; }
+                .btn-submit-p { flex: 2; padding: 16px; border-radius: 12px; border: none; background: linear-gradient(135deg, var(--navy-primary), #1e40af); color: white; font-weight: 800; cursor: pointer; transition: all 0.2s; box-shadow: 0 8px 16px rgba(30, 64, 175, 0.2); }
+                .btn-submit-p:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 12px 20px rgba(30, 64, 175, 0.3); }
+                .btn-submit-p:disabled { opacity: 0.7; cursor: not-allowed; }
 
-                @keyframes slideUp { from { opacity: 0; transform: translateY(40px); } to { opacity: 1; transform: translateY(0); } }
-                .animate-slide-up { animation: slideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1); }
+                @keyframes modalPop { from { opacity: 0; transform: scale(0.95) translateY(20px); } to { opacity: 1; transform: scale(1) translateY(0); } }
             `}</style>
         </div>
     );

@@ -247,3 +247,49 @@
         border: none;
     }
 }
+
+/* KOP SURAT STYLES (Visible both in screen and print) */
+.kop-surat {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 30px;
+    margin-bottom: 10px;
+    text-align: center;
+}
+.kop-logo {
+    width: 120px;
+}
+.kop-logo img {
+    width: 100%;
+    height: auto;
+    object-fit: contain;
+}
+.kop-text h1 {
+    font-size: 24px;
+    font-weight: 900;
+    margin: 0 0 5px 0;
+    color: var(--navy-primary, #0f172a);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+.kop-text p {
+    font-size: 14px;
+    margin: 3px 0;
+    color: #334155;
+    line-height: 1.4;
+}
+.kop-divider {
+    border: none;
+    border-top: 3px solid #0f172a;
+    border-bottom: 1px solid #0f172a;
+    height: 2px;
+    margin-bottom: 20px;
+}
+.report-title-print {
+    text-align: center;
+    font-size: 16px;
+    text-transform: uppercase;
+    margin-bottom: 20px;
+    font-weight: bold;
+}

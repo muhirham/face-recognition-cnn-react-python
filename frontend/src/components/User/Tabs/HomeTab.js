@@ -4,7 +4,9 @@ function HomeTab({ username, attendanceStatus, history, holiday, onGoToAbsen }) 
     const today = new Date().toLocaleDateString('id-ID', { day: '2-digit', month: '2-digit', year: 'numeric' });
     const now = new Date();
     const localDateString = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
-    const todayLog = history.find(h => h.tanggal === localDateString);
+    const todayHistory = history.find(h => h.tanggal === localDateString);
+    const masukLog = todayHistory ? todayHistory.masuk : null;
+    const pulangLog = todayHistory ? todayHistory.pulang : null;
 
     // Count unique dates for "Total Hadir" (one session per day)
     const uniqueDays = [...new Set(history.map(item => item.tanggal))].length;
@@ -29,13 +31,32 @@ function HomeTab({ username, attendanceStatus, history, holiday, onGoToAbsen }) 
                             <span className="p-label">Tanggal:</span>
                             <span className="p-value">{today}</span>
                         </div>
-                        <div className="p-info-row">
-                            <span className="p-label">Masuk:</span>
-                            <div className="p-value-group">
-                                <span className="p-value">{todayLog ? todayLog.waktu : '--:--:--'}</span>
-                                {todayLog && <span className={`p-pill ${todayLog.status}`}>{todayLog.status.replace('_', ' ')}</span>}
-                            </div>
-                        </div>
+                        {!holiday && (
+                            <>
+                                <div className="p-info-row">
+                                    <span className="p-label">Masuk:</span>
+                                    <div className="p-value-group">
+                                        <span className="p-value">{masukLog ? masukLog.waktu : '--:--:--'}</span>
+                                        {masukLog && <span className={`p-pill ${masukLog.status}`}>{masukLog.status.replace('_', ' ').toUpperCase()}</span>}
+                                    </div>
+                                </div>
+                                {masukLog && masukLog.menit_terlambat > 0 && (
+                                    <div className="p-info-row" style={{ marginTop: '-10px', marginBottom: '10px' }}>
+                                        <span className="p-label"></span>
+                                        <span style={{ fontSize: '13px', color: '#dc2626', fontWeight: 'bold' }}>
+                                            Keterlambatan: {masukLog.menit_terlambat} menit
+                                        </span>
+                                    </div>
+                                )}
+                                <div className="p-info-row">
+                                    <span className="p-label">Pulang:</span>
+                                    <div className="p-value-group">
+                                        <span className="p-value">{pulangLog ? pulangLog.waktu : '--:--:--'}</span>
+                                        {pulangLog && <span className={`p-pill ${pulangLog.status}`}>{pulangLog.status.replace('_', ' ').toUpperCase()}</span>}
+                                    </div>
+                                </div>
+                            </>
+                        )}
 
                         <div className="attendance-status-badge">
                             {holiday ? (
