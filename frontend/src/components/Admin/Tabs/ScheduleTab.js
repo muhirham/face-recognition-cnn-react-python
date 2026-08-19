@@ -20,6 +20,7 @@ function ScheduleTab() {
         jam_pulang: '17:00',
         toleransi_menit: 15
     });
+    const [isEditing, setIsEditing] = useState(false);
 
     const fetchData = async () => {
         setIsLoading(true);
@@ -45,15 +46,43 @@ function ScheduleTab() {
     const handleAddShift = async (e) => {
         e.preventDefault();
         try {
-            // Gunakan endpoint /admin/schedule sesuai main.py
+            // Gunakan endpoint /admin/schedule sesuai main.py (ini berfungsi sebagai upsert/update juga jika dept_id sudah ada)
             await axios.post(`${API_BASE_URL}/admin/schedule`, newShift);
-            toast.success("Shift kerja ditambahkan");
+            toast.success(isEditing ? "Shift kerja diperbarui" : "Shift kerja ditambahkan");
             setNewShift({ dept_id: '', nama_shift: '', jam_masuk: '08:00', jam_pulang: '17:00', toleransi_menit: 15 });
+            setIsEditing(false);
             fetchData();
-        } catch (err) { toast.error("Gagal menambah shift"); }
+        } catch (err) { toast.error("Gagal menyimpan shift"); }
     };
 
+    const handleEditClick = (shift) => {
+        const formatTime = (timeStr) => {
+            if (!timeStr) return null;
+            const parts = timeStr.split(':');
+            if (parts.length >= 2) {
+                const hh = parts[0].padStart(2, '0');
+                const mm = parts[1].padStart(2, '0');
+                return `${hh}:${mm}`;
+            }
+            return timeStr;
+        };
 
+        setNewShift({
+            dept_id: shift.dept_id,
+            nama_shift: shift.nama_shift || '',
+            jam_masuk: shift.jam_masuk ? formatTime(shift.jam_masuk) : '08:00',
+            jam_pulang: shift.jam_pulang ? formatTime(shift.jam_pulang) : '17:00',
+            toleransi_menit: shift.toleransi_menit || 15
+        });
+        setIsEditing(true);
+        // Scroll ke atas agar user lihat formnya
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    };
+
+    const handleCancelEdit = () => {
+        setNewShift({ dept_id: '', nama_shift: '', jam_masuk: '08:00', jam_pulang: '17:00', toleransi_menit: 15 });
+        setIsEditing(false);
+    };
 
     const handleDeleteShift = async () => {
         if (!deleteConfirmShift) return;
@@ -64,8 +93,6 @@ function ScheduleTab() {
             fetchData();
         } catch (err) { toast.error("Gagal menghapus"); }
     };
-
-
 
     if (isLoading) {
         return <div style={{padding: '40px', fontWeight: '800'}}>Memuat Pengaturan Jadwal...</div>;
@@ -126,13 +153,17 @@ function ScheduleTab() {
                                 onChange={(e) => setNewShift({...newShift, toleransi_menit: e.target.value})} 
                                 style={{ width: '100px' }}
                             />
-                            <button type="submit" className="btn-save-mini">Simpan</button>
+                            <button type="submit" className="btn-save-mini">{isEditing ? 'Update' : 'Simpan'}</button>
+                            {isEditing && (
+                                <button type="button" className="btn-save-mini" style={{background: '#f1f5f9', color: 'var(--navy-primary)'}} onClick={handleCancelEdit}>Batal</button>
+                            )}
                         </form>
 
                         <div className="table-wrapper-p">
                             <table className="shift-table-mini">
                                 <thead>
                                     <tr>
+                                        <th style={{ width: '50px', textAlign: 'center' }}>No</th>
                                         <th>Departemen</th>
                                         <th>Nama Shift</th>
                                         <th>Jam Masuk</th>
@@ -142,16 +173,28 @@ function ScheduleTab() {
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    {currentShifts.length > 0 ? currentShifts.map(s => (
+                                    {currentShifts.length > 0 ? currentShifts.map((s, index) => (
                                         <tr key={s.id}>
+                                            <td style={{ textAlign: 'center', fontWeight: 'bold', color: '#64748b' }}>
+                                                {(currentPageShift - 1) * itemsPerPageShift + index + 1}
+                                            </td>
                                             <td><strong>{s.nama_dept}</strong></td>
                                             <td>{s.nama_shift}</td>
                                             <td>{s.jam_masuk.substring(0,5)}</td>
                                             <td>{s.jam_pulang.substring(0,5)}</td>
                                             <td>{s.toleransi_menit} menit</td>
-                                            <td><button className="btn-del-text" onClick={() => setDeleteConfirmShift(s.id)}>Hapus</button></td>
+                                            <td>
+                                                <div style={{display: 'flex', gap: '16px', alignItems: 'center'}}>
+                                                    <button className="btn-edit-text" onClick={() => handleEditClick(s)} title="Edit Shift">
+                                                        <i className="fas fa-edit"></i>
+                                                    </button>
+                                                    <button className="btn-del-text" onClick={() => setDeleteConfirmShift(s.id)} title="Hapus Shift">
+                                                        <i className="fas fa-trash-alt"></i>
+                                                    </button>
+                                                </div>
+                                            </td>
                                         </tr>
-                                    )) : <tr><td colSpan="6" className="empty-p">Belum ada shift yang sesuai.</td></tr>}
+                                    )) : <tr><td colSpan="7" className="empty-p">Belum ada shift yang sesuai.</td></tr>}
                                 </tbody>
                             </table>
                         </div>
@@ -211,7 +254,10 @@ function ScheduleTab() {
                 .shift-table-mini { width: 100%; border-collapse: collapse; font-size: 13px; }
                 .shift-table-mini th { text-align: left; padding: 12px; color: var(--slate-muted); border-bottom: 2px solid #f1f5f9; }
                 .shift-table-mini td { padding: 12px; border-bottom: 1px solid #f1f5f9; }
-                .btn-del-text { color: #ff4d4f; background: none; border: none; font-weight: 700; cursor: pointer; }
+                .btn-del-text { color: #ef4444; background: none; border: none; font-size: 16px; cursor: pointer; transition: 0.2s; }
+                .btn-del-text:hover { color: #dc2626; transform: scale(1.1); }
+                .btn-edit-text { color: var(--navy-primary); background: none; border: none; font-size: 16px; cursor: pointer; transition: 0.2s; }
+                .btn-edit-text:hover { color: var(--gold-accent); transform: scale(1.1); }
 
 
 

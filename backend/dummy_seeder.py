@@ -59,10 +59,10 @@ def seed_dummy_data():
             
             print(f"[+] Karyawan {i+1}/40 Created: {nama} ({kode_karyawan})")
             
-        print("\n[*] Membuat data absensi untuk 14 hari terakhir...")
-        # Generate Absensi for the last 14 days
+        print("\n[*] Membuat data absensi untuk 7 hari terakhir...")
+        # Generate Absensi for the last 7 days
         today = datetime.now()
-        for i in range(14):
+        for i in range(7):
             # Mundur i hari
             target_date = today - timedelta(days=i)
             

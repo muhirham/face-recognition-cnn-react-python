@@ -8,6 +8,7 @@ function HolidayTab() {
     const [holidays, setHolidays] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
     const [deleteConfirmHoliday, setDeleteConfirmHoliday] = useState(null);
+    const [editingHoliday, setEditingHoliday] = useState(null);
 
     const [newHoliday, setNewHoliday] = useState({ tanggal: '', keterangan: '' });
 
@@ -68,6 +69,16 @@ function HolidayTab() {
         } catch (err) { toast.error("Gagal menghapus"); }
     };
 
+    const handleUpdateHoliday = async (e) => {
+        e.preventDefault();
+        try {
+            await axios.put(`${API_BASE_URL}/admin/holidays/${editingHoliday.id}`, editingHoliday);
+            toast.success("Hari libur berhasil diupdate");
+            setEditingHoliday(null);
+            fetchData();
+        } catch (err) { toast.error("Gagal update hari libur"); }
+    };
+
     if (isLoading) {
         return <div style={{padding: '40px', fontWeight: '800'}}>Memuat Master Hari Libur...</div>;
     }
@@ -118,12 +129,20 @@ function HolidayTab() {
                                         <span className="h-date">{new Date(h.tanggal).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}</span>
                                         <span className="h-text">{h.keterangan}</span>
                                     </div>
-                                    <button className="btn-del-icon" onClick={() => setDeleteConfirmHoliday(h.id)}>
-                                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                            <polyline points="3 6 5 6 21 6"></polyline>
-                                            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
-                                        </svg>
-                                    </button>
+                                    <div style={{display: 'flex', gap: '8px', alignItems: 'center'}}>
+                                        <button className="btn-edit-icon" onClick={() => setEditingHoliday({...h})} style={{background: 'none', border: 'none', color: '#3b82f6', cursor: 'pointer', padding: '4px'}} title="Edit">
+                                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                                                <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                                            </svg>
+                                        </button>
+                                        <button className="btn-del-icon" onClick={() => setDeleteConfirmHoliday(h.id)} title="Hapus">
+                                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                                <polyline points="3 6 5 6 21 6"></polyline>
+                                                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                                            </svg>
+                                        </button>
+                                    </div>
                                 </div>
                             )) : (
                                 <div className="empty-state">
@@ -169,6 +188,30 @@ function HolidayTab() {
                             <button className="btn-cancel" onClick={() => setDeleteConfirmHoliday(null)}>Batal</button>
                             <button className="btn-confirm-delete" onClick={handleDeleteHoliday}>Ya, Hapus</button>
                         </div>
+                    </div>
+                </div>
+            )}
+
+            {editingHoliday && (
+                <div className="custom-modal-overlay">
+                    <div className="custom-modal-box" style={{maxWidth: '400px', textAlign: 'left'}}>
+                        <div className="modal-header-p" style={{borderBottom: '1px solid #eee', paddingBottom: '15px', marginBottom: '20px', textAlign: 'center'}}>
+                            <h3 style={{margin: 0, color: '#1e293b'}}>Edit Hari Libur</h3>
+                        </div>
+                        <form onSubmit={handleUpdateHoliday}>
+                            <div className="input-group" style={{marginBottom: '15px'}}>
+                                <label style={{display: 'block', marginBottom: '5px', fontWeight: '500'}}>Tanggal</label>
+                                <input type="date" value={editingHoliday.tanggal} onChange={(e) => setEditingHoliday({...editingHoliday, tanggal: e.target.value})} required style={{width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #cbd5e1'}} />
+                            </div>
+                            <div className="input-group" style={{marginBottom: '20px'}}>
+                                <label style={{display: 'block', marginBottom: '5px', fontWeight: '500'}}>Keterangan Libur</label>
+                                <input type="text" value={editingHoliday.keterangan} onChange={(e) => setEditingHoliday({...editingHoliday, keterangan: e.target.value})} required style={{width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #cbd5e1'}} />
+                            </div>
+                            <div className="modal-actions-p" style={{display: 'flex', justifyContent: 'center', gap: '10px'}}>
+                                <button type="button" className="btn-cancel" onClick={() => setEditingHoliday(null)}>Batal</button>
+                                <button type="submit" className="btn-confirm" style={{backgroundColor: '#3b82f6', color: 'white', border: 'none', padding: '10px 20px', borderRadius: '8px', cursor: 'pointer'}}>Simpan Perubahan</button>
+                            </div>
+                        </form>
                     </div>
                 </div>
             )}

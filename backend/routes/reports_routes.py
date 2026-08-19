@@ -14,10 +14,15 @@ def report_daily():
         cursor.execute("""
             SELECT 
                 k.kode_karyawan, k.nama, d.nama_dept,
-                a.waktu, a.jenis, a.status, a.menit_terlambat, a.alasan
+                a.waktu, a.jenis, a.status, a.menit_terlambat, a.alasan, a.foto_absen,
+                COALESCE(s.jam_masuk, s2.jam_masuk, s_default.jam_masuk) as jam_masuk, 
+                COALESCE(s.jam_pulang, s2.jam_pulang, s_default.jam_pulang) as jam_pulang
             FROM absensis a
             JOIN karyawans k ON a.karyawan_id = k.id
             LEFT JOIN departemens d ON k.dept_id = d.id
+            LEFT JOIN shift_kerjas s ON a.shift_id = s.id
+            LEFT JOIN shift_kerjas s2 ON k.dept_id = s2.dept_id
+            LEFT JOIN (SELECT * FROM shift_kerjas WHERE dept_id IS NULL LIMIT 1) s_default ON 1=1
             WHERE a.tanggal = %s
             ORDER BY a.waktu ASC
         """, (date_str,))
@@ -25,6 +30,8 @@ def report_daily():
         raw_logs = cursor.fetchall()
         for row in raw_logs:
             row['waktu'] = str(row['waktu']) if row['waktu'] else None
+            row['jam_masuk'] = str(row['jam_masuk']) if row.get('jam_masuk') else None
+            row['jam_pulang'] = str(row['jam_pulang']) if row.get('jam_pulang') else None
             if row['status'] == 'lembur':
                 row['status'] = 'tepat_waktu'
             
@@ -50,15 +57,22 @@ def report_monthly():
             if date_obj.weekday() < 5: # Monday = 0 ... Friday = 4 (Saturday=5, Sunday=6)
                 working_days += 1
                 
-        # Get holidays in this month
+        # Get holidays in this month from the 'holidays' table (Master Data Holiday)
+        cursor.execute("""
+            SELECT DAY(tanggal) as hol_day 
+            FROM holidays 
+            WHERE YEAR(tanggal) = %s AND MONTH(tanggal) = %s 
+        """, (year, month))
+        holiday_days = [row['hol_day'] for row in cursor.fetchall()]
+        
+        # Calculate effective days by excluding holidays that fall on weekdays
         cursor.execute("""
             SELECT COUNT(*) as hol_count 
-            FROM hari_liburs 
+            FROM holidays 
             WHERE YEAR(tanggal) = %s AND MONTH(tanggal) = %s 
-              AND DAYOFWEEK(tanggal) NOT IN (1, 7) -- MySQL: 1=Sunday, 7=Saturday
+              AND DAYOFWEEK(tanggal) NOT IN (1, 7)
         """, (year, month))
         holiday_count = cursor.fetchone()['hol_count']
-        
         effective_days = max(0, working_days - holiday_count)
         
         # Get Attendance Aggregation
@@ -75,16 +89,37 @@ def report_monthly():
         """, (year, month))
         
         data = cursor.fetchall()
+        
+        # Get daily records for matrix view
+        cursor.execute("""
+            SELECT karyawan_id, DAY(tanggal) as day_of_month, status 
+            FROM absensis 
+            WHERE YEAR(tanggal) = %s AND MONTH(tanggal) = %s AND jenis = 'masuk'
+        """, (year, month))
+        daily_records = cursor.fetchall()
+        
+        attendance_map = {}
+        for rec in daily_records:
+            emp_id = rec['karyawan_id']
+            day = rec['day_of_month']
+            status = rec['status']
+            if emp_id not in attendance_map:
+                attendance_map[emp_id] = {}
+            attendance_map[emp_id][day] = status
+
         for row in data:
-            # Cast decimal/type issues
+            emp_id = row['id']
             row['hadir'] = int(row['hadir'] or 0)
             row['total_terlambat'] = int(row['total_terlambat'] or 0)
             row['akumulasi_menit_telat'] = int(row['akumulasi_menit_telat'] or 0)
             row['alfa'] = max(0, effective_days - row['hadir'])
+            row['daily_status'] = attendance_map.get(emp_id, {})
 
         return jsonify({
             'month': month, 'year': year, 
             'effective_days': effective_days, 
+            'num_days': num_days,
+            'holidays': holiday_days,
             'data': data
         })
     finally:
@@ -103,27 +138,32 @@ def report_late():
         sql = """
             SELECT 
                 k.kode_karyawan, k.nama, d.nama_dept,
-                COUNT(a.id) as frekuensi_telat,
-                SUM(a.menit_terlambat) as total_menit
+                a.tanggal, a.waktu as absen_masuk, a.menit_terlambat as durasi_terlambat, a.alasan,
+                COALESCE(s.jam_masuk, s2.jam_masuk, s_default.jam_masuk) as jadwal_masuk
             FROM absensis a
             JOIN karyawans k ON a.karyawan_id = k.id
             LEFT JOIN departemens d ON k.dept_id = d.id
-            WHERE a.status = 'terlambat'
+            LEFT JOIN shift_kerjas s ON a.shift_id = s.id
+            LEFT JOIN shift_kerjas s2 ON k.dept_id = s2.dept_id
+            LEFT JOIN (SELECT * FROM shift_kerjas WHERE dept_id IS NULL LIMIT 1) s_default ON 1=1
+            WHERE a.status = 'terlambat' AND a.jenis = 'masuk'
         """
         params = []
         if month and year:
             sql += " AND YEAR(a.tanggal) = %s AND MONTH(a.tanggal) = %s "
             params.extend([year, month])
             
-        sql += " GROUP BY k.id ORDER BY total_menit DESC"
+        sql += " ORDER BY a.tanggal DESC, a.waktu DESC"
         
         cursor.execute(sql, tuple(params))
         data = cursor.fetchall()
         for row in data:
-            row['frekuensi_telat'] = int(row['frekuensi_telat'] or 0)
-            row['total_menit'] = int(row['total_menit'] or 0)
+            row['tanggal'] = row['tanggal'].strftime('%Y-%m-%d') if row['tanggal'] else None
+            row['absen_masuk'] = str(row['absen_masuk']) if row['absen_masuk'] else None
+            row['jadwal_masuk'] = str(row['jadwal_masuk']) if row['jadwal_masuk'] else None
+            row['durasi_terlambat'] = int(row['durasi_terlambat'] or 0)
             
-        return jsonify({'data': data})
+        return jsonify({'month': month, 'year': year, 'data': data})
     finally:
         cursor.close()
         conn.close()
@@ -155,11 +195,16 @@ def report_early():
     try:
         sql = """
             SELECT 
-                k.kode_karyawan, k.nama,
-                a.tanggal, a.waktu, a.alasan
+                k.kode_karyawan, k.nama, d.nama_dept,
+                a.tanggal, a.waktu as absen_pulang, a.alasan,
+                COALESCE(s.jam_pulang, s2.jam_pulang, s_default.jam_pulang) as jadwal_pulang
             FROM absensis a
             JOIN karyawans k ON a.karyawan_id = k.id
-            WHERE a.status = 'pulang_awal'
+            LEFT JOIN departemens d ON k.dept_id = d.id
+            LEFT JOIN shift_kerjas s ON a.shift_id = s.id
+            LEFT JOIN shift_kerjas s2 ON k.dept_id = s2.dept_id
+            LEFT JOIN (SELECT * FROM shift_kerjas WHERE dept_id IS NULL LIMIT 1) s_default ON 1=1
+            WHERE a.status = 'pulang_awal' AND a.jenis = 'pulang'
         """
         params = []
         if month and year:
@@ -171,10 +216,22 @@ def report_early():
         cursor.execute(sql, tuple(params))
         data = cursor.fetchall()
         for row in data:
-            row['tanggal'] = row['tanggal'].strftime('%Y-%m-%d')
-            row['waktu'] = str(row['waktu'])
+            row['tanggal'] = row['tanggal'].strftime('%Y-%m-%d') if row['tanggal'] else None
+            row['absen_pulang'] = str(row['absen_pulang']) if row['absen_pulang'] else None
+            row['jadwal_pulang'] = str(row['jadwal_pulang']) if row['jadwal_pulang'] else None
             
-        return jsonify({'data': data})
+            if row['absen_pulang'] and row['jadwal_pulang']:
+                try:
+                    t_absen = datetime.strptime(row['absen_pulang'], '%H:%M:%S')
+                    t_jadwal = datetime.strptime(row['jadwal_pulang'], '%H:%M:%S')
+                    diff = (t_jadwal - t_absen).total_seconds() / 60
+                    row['durasi_pulang_awal'] = int(diff) if diff > 0 else 0
+                except:
+                    row['durasi_pulang_awal'] = 0
+            else:
+                row['durasi_pulang_awal'] = 0
+            
+        return jsonify({'month': month, 'year': year, 'data': data})
     finally:
         cursor.close()
         conn.close()

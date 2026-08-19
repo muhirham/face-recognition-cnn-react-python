@@ -290,9 +290,9 @@ function AbsenTab({ webcamRef, canvasRef, scanStatus, attendanceStatus, todaySch
                 .preview-label { font-size: 11px; font-weight: 800; color: var(--slate-muted); margin-bottom: 8px; flex-shrink: 0; align-self: flex-start; }
                 
                 .camera-viewport-wrapper {
-                    /* FIXED DIMENSIONS AS SUGGESTED FOR MAXIMUM COORDINATE STABILITY */
-                    width: 640px; 
-                    height: 480px;
+                    width: 100%; 
+                    max-width: 640px;
+                    aspect-ratio: 4/3;
                     background: #000; 
                     border-radius: 12px;
                     position: relative; 
@@ -320,7 +320,7 @@ function AbsenTab({ webcamRef, canvasRef, scanStatus, attendanceStatus, todaySch
                 }
                 .lock-icon { font-size: 48px; margin-bottom: 20px; opacity: 0.5; }
                 .blocked-view-overlay h3 { font-size: 20px; font-weight: 800; margin-bottom: 12px; color: var(--gold-accent); }
-                .blocked-view-overlay p { font-size: 14px; opacity: 0.7; line-height: 1.6; }
+                .blocked-view-overlay p { font-size: 14px; opacity: 0.7; line-height: 1.6; word-wrap: break-word; padding: 0 10px; width: 100%; }
 
                 .absen-actions { display: flex; gap: 16px; }
                 .btn-secondary { flex: 1; padding: 14px; border-radius: 12px; border: 2px solid #e2e8f0; font-weight: 700; cursor: pointer; background: white; }

@@ -11,7 +11,8 @@ function EditEmployeeModal({ isOpen, onClose, employee, onSuccess }) {
         role: 'karyawan',
         jabatan: '',
         dept_id: '',
-        nomor_hp: ''
+        nomor_hp: '',
+        status_kerja: 'aktif'
     });
     const [masterData, setMasterData] = useState({ departemens: [], jabatans: [] });
     const [isSubmitting, setIsSubmitting] = useState(false);
@@ -37,7 +38,8 @@ function EditEmployeeModal({ isOpen, onClose, employee, onSuccess }) {
                 role: employee.role || 'karyawan',
                 jabatan: employee.jabatan || '',
                 dept_id: employee.dept_id || '',
-                nomor_hp: employee.nomor_hp || ''
+                nomor_hp: employee.nomor_hp || '',
+                status_kerja: employee.status_kerja || 'aktif'
             });
         }
     }, [employee]);
@@ -119,15 +121,27 @@ function EditEmployeeModal({ isOpen, onClose, employee, onSuccess }) {
                                 required
                             />
                         </div>
-                        <div className="input-group full-width">
-                            <label>Role Akses</label>
-                            <select 
-                                value={formData.role}
-                                onChange={(e) => setFormData({...formData, role: e.target.value})}
-                            >
-                                <option value="karyawan">Karyawan (Hanya Absen)</option>
-                                <option value="admin">Admin (Akses Dashboard)</option>
-                            </select>
+                        <div className="input-group full-width" style={{display: 'flex', gap: '16px'}}>
+                            <div style={{flex: 1}}>
+                                <label>Role Akses</label>
+                                <select 
+                                    value={formData.role}
+                                    onChange={(e) => setFormData({...formData, role: e.target.value})}
+                                >
+                                    <option value="karyawan">Karyawan (Hanya Absen)</option>
+                                    <option value="admin">Admin (Akses Dashboard)</option>
+                                </select>
+                            </div>
+                            <div style={{flex: 1}}>
+                                <label>Status Karyawan</label>
+                                <select 
+                                    value={formData.status_kerja}
+                                    onChange={(e) => setFormData({...formData, status_kerja: e.target.value})}
+                                >
+                                    <option value="aktif">Aktif</option>
+                                    <option value="non-aktif">Non-Aktif</option>
+                                </select>
+                            </div>
                         </div>
                         <div className="input-group full-width">
                             <label>Reset Password (Opsional)</label>

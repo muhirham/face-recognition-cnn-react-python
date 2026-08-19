@@ -1,4 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
+import Particles from "react-tsparticles";
+import { loadSlim } from "tsparticles-slim";
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 import { ToastContainer, toast } from 'react-toastify';
@@ -24,13 +26,15 @@ function SignIn() {
         setIsLoading(true);
         try {
             const response = await axios.post(`${API_BASE_URL}/login_credential`, credentials);
-            const { user_id, username, role } = response.data;
+            const { user_id, username, role, nama_karyawan, jabatan_karyawan } = response.data;
             
             toast.success(`Selamat Datang, ${username}!`);
             
             setCookie('user_id', user_id, 7);
             setCookie('username', username, 7);
             setCookie('role', role, 7);
+            if(nama_karyawan) setCookie('nama_karyawan', nama_karyawan, 7);
+            if(jabatan_karyawan) setCookie('jabatan_karyawan', jabatan_karyawan, 7);
 
             setTimeout(() => {
                 if (role === 'admin') navigate('/admin-dashboard');
@@ -43,26 +47,51 @@ function SignIn() {
         }
     };
 
+    const particlesInit = useCallback(async engine => {
+        await loadSlim(engine);
+    }, []);
+
+    const particlesOptions = {
+        background: { color: { value: "transparent" } },
+        fpsLimit: 60,
+        interactivity: {
+            events: {
+                onHover: { enable: true, mode: "grab" },
+                resize: true,
+            },
+            modes: { grab: { distance: 150, links: { opacity: 0.3 } } },
+        },
+        particles: {
+            color: { value: "#bfa060" }, // gold accent
+            links: { color: "#ffffff", distance: 150, enable: true, opacity: 0.4, width: 1.5 },
+            move: { direction: "none", enable: true, outModes: { default: "bounce" }, random: false, speed: 1.2, straight: false },
+            number: { density: { enable: true, area: 800 }, value: 80 },
+            opacity: { value: 0.7 },
+            shape: { type: "circle" },
+            size: { value: { min: 2, max: 4 } },
+        },
+        detectRetina: true,
+    };
+
     return (
-        <div className="academic-portal-wrapper">
-            <div className="academic-login-card">
-                {/* Reference-Matched Header Tabs */}
-                <div className="login-card-header">
-                    <div className="header-branding">
-                        <div className="ut-circle-logo">IMP</div>
-                        <span className="instansi-name">PT INTERTEL MEDIA PRIMA</span>
+        <div className="academic-portal-wrapper" style={{ position: 'relative' }}>
+            <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', zIndex: 0, pointerEvents: 'none' }}>
+                <Particles id="tsparticles-login" init={particlesInit} options={particlesOptions} style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%' }} />
+            </div>
+
+            <div className="academic-login-card" style={{ zIndex: 1 }}>
+                {/* Left Panel: Branding */}
+                <div className="login-brand-panel">
+                    <div className="brand-glass-icon">
+                        💎
                     </div>
-                    <nav className="header-nav">
-                        <button className="nav-link active">Beranda</button>
-                        <button className="nav-link">Tentang Kami</button>
-                    </nav>
+                    <h1>Sistem Absensi<br/>Pengenalan Wajah</h1>
+                    <p>PT Intertel Media Prima.<br/>Autentikasi presensi cerdas berbasis biometrik dengan keamanan tingkat tinggi.</p>
                 </div>
 
+                {/* Right Panel: Form */}
                 <div className="login-card-body">
-                    <div className="academic-titles">
-                        <h1>Sistem Absensi Otomatis <br/> Berbasis Pengenalan Wajah</h1>
-                        <p className="login-subtitle">Login Pengguna</p>
-                    </div>
+                    <span className="login-subtitle">Secure Login</span>
 
                     <form className="formal-login-form" onSubmit={handleCredentialSubmit}>
                         <div className="formal-group">

@@ -81,6 +81,7 @@ function MasterDatasetTab() {
                             <table className="premium-admin-table">
                                 <thead>
                                     <tr>
+                                        <th style={{ width: '50px', textAlign: 'center' }}>No</th>
                                         <th>Nama Karyawan</th>
                                         <th>NIP</th>
                                         <th>Departemen</th>
@@ -90,8 +91,11 @@ function MasterDatasetTab() {
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    {currentDatasets.length > 0 ? currentDatasets.map((ds) => (
+                                    {currentDatasets.length > 0 ? currentDatasets.map((ds, index) => (
                                         <tr key={ds.karyawan_id}>
+                                            <td style={{ textAlign: 'center', fontWeight: 'bold', color: '#64748b' }}>
+                                                {(currentPage - 1) * itemsPerPage + index + 1}
+                                            </td>
                                             <td className="bold">
                                                 <span style={{ fontSize: '14px', color: '#0f172a' }}>{ds.nama}</span>
                                             </td>
@@ -191,7 +195,7 @@ function MasterDatasetTab() {
                                         <img 
                                             src={`${API_BASE_URL}/static/datasets/${previewDataset.kode_karyawan}/${i + 1}.jpg`} 
                                             alt={`Img ${i + 1}`}
-                                            onError={(e) => { e.target.onerror = null; e.target.src = 'https://via.placeholder.com/150?text=No+Image'; }}
+                                            onError={(e) => { e.target.onerror = null; e.target.src = `data:image/svg+xml;charset=UTF-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='150' height='150' viewBox='0 0 150 150'%3E%3Crect width='150' height='150' fill='%23e2e8f0'/%3E%3Ctext x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' font-family='sans-serif' font-size='14px' fill='%2364748b'%3EDitolak AI%3C/text%3E%3C/svg%3E`; }}
                                         />
                                         <div className="gallery-number">{i + 1}</div>
                                     </div>

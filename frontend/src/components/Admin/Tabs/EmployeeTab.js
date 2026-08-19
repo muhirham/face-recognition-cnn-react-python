@@ -82,6 +82,7 @@ function EmployeeTab() {
                     <table className="premium-admin-table">
                         <thead>
                             <tr>
+                                <th style={{ width: '50px', textAlign: 'center' }}>No</th>
                                 <th>NIP</th>
                                 <th>Nama</th>
                                 <th>Nomor HP</th>
@@ -93,8 +94,11 @@ function EmployeeTab() {
                         </thead>
                         <tbody>
                             {currentEmployees.length > 0 ? (
-                                currentEmployees.map((emp) => (
+                                currentEmployees.map((emp, index) => (
                                     <tr key={emp.id}>
+                                        <td style={{ textAlign: 'center', fontWeight: 'bold', color: '#64748b' }}>
+                                            {(currentPage - 1) * itemsPerPage + index + 1}
+                                        </td>
                                         <td className="bold">{emp.kode_karyawan || 'N/A'}</td>
                                         <td>{emp.nama || emp.username || 'Tanpa Nama'}</td>
                                         <td>{emp.nomor_hp || '-'}</td>
@@ -115,7 +119,7 @@ function EmployeeTab() {
                                 ))
                             ) : (
                                 <tr>
-                                    <td colSpan="7" className="empty-state">Belum ada data karyawan yang sesuai.</td>
+                                    <td colSpan="8" className="empty-state">Belum ada data karyawan yang sesuai.</td>
                                 </tr>
                             )}
                         </tbody>

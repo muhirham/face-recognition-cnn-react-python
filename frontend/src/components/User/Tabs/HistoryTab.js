@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import API_BASE_URL from '../../../apiConfig';
 
-function HistoryTab({ history }) {
+function HistoryTab({ history, selectedMonth, setSelectedMonth }) {
     const [selectedImage, setSelectedImage] = useState(null);
     const [currentPage, setCurrentPage] = useState(1);
     const [itemsPerPage, setItemsPerPage] = useState(10);
@@ -74,8 +74,22 @@ function HistoryTab({ history }) {
     return (
         <div className="tab-view-container animate-fade-in">
             <div className="section-header">
-                <h2>Riwayat Absensi</h2>
-                <p>Rekap data kehadiran harian Anda.</p>
+                <div>
+                    <h2>Riwayat Absensi</h2>
+                    <p>Rekap data kehadiran harian Anda.</p>
+                </div>
+                <div className="month-picker-container">
+                    <span>BULAN:</span>
+                    <input 
+                        type="month"
+                        className="search-input"
+                        value={selectedMonth}
+                        onChange={(e) => {
+                            setSelectedMonth(e.target.value);
+                            setCurrentPage(1);
+                        }}
+                    />
+                </div>
             </div>
 
             <div className="data-table-card">
@@ -166,8 +180,14 @@ function HistoryTab({ history }) {
 
             <style>{`
                 .tab-view-container { display: flex; flex-direction: column; gap: 24px; width: 100%; margin: 0 auto; }
+                .section-header { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px; }
                 .section-header h2 { font-size: 24px; font-weight: 800; color: var(--navy-primary); margin-bottom: 4px; }
                 .section-header p { color: var(--slate-muted); margin: 0; }
+                
+                .month-picker-container { display: flex; align-items: center; gap: 8px; }
+                .month-picker-container span { font-size: 13px; font-weight: 700; color: var(--slate-muted); }
+                .month-picker-container input { width: 150px; padding: 10px 16px; border-radius: 10px; border: 1px solid #cbd5e1; outline: none; }
+
 
                 .data-table-card {
                     background: #ffffff;
@@ -356,6 +376,10 @@ function HistoryTab({ history }) {
                     }
                     .modern-data-table td:last-child { border-bottom: none; }
                     
+                    .section-header { flex-direction: column; align-items: flex-start; gap: 12px; }
+                    .month-picker-container { width: 100%; }
+                    .month-picker-container input { flex: 1; }
+
                     .pagination-container { flex-direction: column; align-items: stretch; gap: 16px; }
                     .page-controls { flex-direction: column; align-items: stretch; gap: 16px; }
                     .rows-per-page { justify-content: space-between; }

@@ -90,14 +90,17 @@ def detect_live():
         img = cv2.imdecode(np_img, cv2.IMREAD_COLOR)
         rgb_img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
         
-        # CPU OPTIMIZATION 1: Downscale image to 50% for 4x faster face detection
-        small_rgb = cv2.resize(rgb_img, (0, 0), fx=0.5, fy=0.5)
-        raw_locations = face_recognition.face_locations(small_rgb, model='hog')
+        # Frontend already downscaled the image to 320x240 to save bandwidth.
+        # DO NOT downscale it again, otherwise the face becomes too tiny for HOG to detect!
+        raw_locations = face_recognition.face_locations(rgb_img, model='hog')
         
-        # Scale locations back up to original size
+        # Scale locations back up to match the frontend canvas which expects 640x480 coordinates
+        # Since the image we processed is 320x240, we multiply coordinates by 2.
         face_locations = [(top*2, right*2, bottom*2, left*2) for (top, right, bottom, left) in raw_locations]
         
         results, recognized_user = [], None
+        
+        user_id = data.get('user_id')
 
         if len(face_locations) > 0:
             # Find largest face (closest to camera)
@@ -106,14 +109,24 @@ def detect_live():
 
             # CPU OPTIMIZATION 2: Only compute encodings & landmarks for the LARGEST face.
             # This prevents 100-300ms lag spikes per false-positive face in the background.
-            largest_loc = [face_locations[largest_face_idx]]
-            live_encodings = face_recognition.face_encodings(rgb_img, largest_loc)
-            face_landmarks_list = face_recognition.face_landmarks(rgb_img, largest_loc)
+            # CRITICAL FIX: We MUST pass raw_locations (which matches the 320x240 rgb_img size), 
+            # NOT face_locations (which was scaled up to 640x480)!
+            largest_loc_raw = [raw_locations[largest_face_idx]]
+            live_encodings = face_recognition.face_encodings(rgb_img, largest_loc_raw)
+            face_landmarks_list = face_recognition.face_landmarks(rgb_img, largest_loc_raw)
             
             live_enc_main = live_encodings[0] if live_encodings else None
             landmarks_main = face_landmarks_list[0] if face_landmarks_list else {}
 
             all_templates = get_all_templates()
+            
+            # CPU OPTIMIZATION 3: 1:1 Verification instead of 1:N Search!
+            # If we know who is logged in, only compare against THEIR template.
+            if user_id:
+                cursor.execute("SELECT id FROM karyawans WHERE user_id = %s", (user_id,))
+                k_data = cursor.fetchone()
+                if k_data:
+                    all_templates = [t for t in all_templates if t['employee_id'] == k_data['id']]
 
             cursor.execute("SELECT nilai FROM pengaturans WHERE kunci = 'min_confidence'")
             setting = cursor.fetchone()
@@ -226,13 +239,25 @@ def submit_attendance():
             return jsonify({'message': f'Sudah absen {jenis} hari ini!'}), 400
 
         cursor.execute("""
-            SELECT k.id, s.id as shift_id, s.jam_masuk, s.jam_pulang, s.toleransi_menit 
+            SELECT k.id, k.status_kerja, 
+                   COALESCE(s.id, s_default.id) as shift_id, 
+                   COALESCE(s.jam_masuk, s_default.jam_masuk) as jam_masuk, 
+                   COALESCE(s.jam_pulang, s_default.jam_pulang) as jam_pulang, 
+                   COALESCE(s.toleransi_menit, s_default.toleransi_menit) as toleransi_menit 
             FROM karyawans k
             LEFT JOIN shift_kerjas s ON k.dept_id = s.dept_id
+            LEFT JOIN (SELECT * FROM shift_kerjas WHERE dept_id IS NULL LIMIT 1) s_default ON 1=1
             WHERE k.id = %s LIMIT 1
         """, (emp_id,))
-        info = cursor.fetchone()
+        karyawan = cursor.fetchone()
+
+        if not karyawan:
+            return jsonify({'message': 'Data karyawan tidak ditemukan!'}), 404
+            
+        if karyawan.get('status_kerja') == 'non-aktif':
+            return jsonify({'message': 'Absensi ditolak! Status Anda saat ini Non-Aktif.'}), 403
         
+        info = karyawan
         status_absen, menit_terlambat = 'tepat_waktu', 0
         
         if info and info.get('jam_masuk') is not None and info.get('toleransi_menit') is not None:
@@ -269,6 +294,7 @@ def submit_attendance():
 @attendance_bp.route('/attendance_history', methods=['GET'])
 def get_user_attendance_history():
     user_id = request.args.get('user_id')
+    month_filter = request.args.get('month')
     conn = get_db_connection()
     cursor = conn.cursor(dictionary=True)
     try:
@@ -276,12 +302,25 @@ def get_user_attendance_history():
         karyawan = cursor.fetchone()
         if not karyawan: return jsonify({'message': 'Error'}), 404
         
-        cursor.execute("""
+        query = """
             SELECT tanggal, waktu, jenis, status, menit_terlambat, alasan, confidence_score, foto_absen 
             FROM absensis 
             WHERE karyawan_id = %s 
-            ORDER BY tanggal DESC, waktu DESC
-        """, (karyawan['id'],))
+        """
+        params = [karyawan['id']]
+        if month_filter:
+            try:
+                import calendar
+                y, m = map(int, month_filter.split('-'))
+                last_day = calendar.monthrange(y, m)[1]
+                query += " AND tanggal BETWEEN %s AND %s"
+                params.extend([f"{y}-{m:02d}-01", f"{y}-{m:02d}-{last_day}"])
+            except:
+                pass
+            
+        query += " ORDER BY tanggal DESC, waktu DESC"
+        
+        cursor.execute(query, tuple(params))
         
         raw_history = cursor.fetchall()
         

@@ -11,7 +11,8 @@ function EnrollmentModal({ isOpen, onClose, onSuccess }) {
         dept_id: '',
         jabatan: '',
         role: 'karyawan',
-        nomor_hp: ''
+        nomor_hp: '',
+        status_kerja: 'aktif'
     });
     const [masterData, setMasterData] = useState({ departemens: [], jabatans: [] });
     const [isSaving, setIsSaving] = useState(false);
@@ -42,7 +43,7 @@ function EnrollmentModal({ isOpen, onClose, onSuccess }) {
             toast.success(response.data.message);
             onSuccess();
             onClose();
-            setFormData({ username: '', email: '', password: '', dept_id: '', jabatan: '', role: 'karyawan', nomor_hp: '' });
+            setFormData({ username: '', email: '', password: '', dept_id: '', jabatan: '', role: 'karyawan', nomor_hp: '', status_kerja: 'aktif' });
         } catch (error) {
             toast.error(error.response?.data?.message || "Gagal mendaftarkan karyawan");
         } finally {
@@ -111,12 +112,21 @@ function EnrollmentModal({ isOpen, onClose, onSuccess }) {
                         </div>
                     </div>
 
-                    <div className="form-group-p">
-                        <label>LEVEL OTORITAS</label>
-                        <select name="role" value={formData.role} onChange={handleInputChange}>
-                            <option value="karyawan">Karyawan</option>
-                            <option value="admin">Administrator</option>
-                        </select>
+                    <div className="form-row-p">
+                        <div className="form-group-p flex-1">
+                            <label>LEVEL OTORITAS</label>
+                            <select name="role" value={formData.role} onChange={handleInputChange}>
+                                <option value="karyawan">Karyawan</option>
+                                <option value="admin">Administrator</option>
+                            </select>
+                        </div>
+                        <div className="form-group-p flex-1">
+                            <label>STATUS KARYAWAN</label>
+                            <select name="status_kerja" value={formData.status_kerja} onChange={handleInputChange}>
+                                <option value="aktif">Aktif</option>
+                                <option value="non-aktif">Non-Aktif</option>
+                            </select>
+                        </div>
                     </div>
 
                     <div className="modal-footer-p">

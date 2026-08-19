@@ -89,9 +89,32 @@ function RegistrationTab() {
         toast.info(`Menscan wajah: ${steps[currentStep].label}...`);
 
         for (let i = 0; i < currentCount; i++) {
-            const imageSrc = webcamRef.current.getScreenshot();
-            if (imageSrc) {
-                newImages.push(imageSrc);
+            const video = webcamRef.current.video;
+            if (video && video.readyState >= 2) {
+                // Downscale and center-crop to 320x240 to prevent backend memory crash
+                const vw = video.videoWidth;
+                const vh = video.videoHeight;
+                let cropW = vw;
+                let cropH = vh;
+                if (vw / vh > 4 / 3) {
+                    cropW = vh * (4 / 3);
+                } else {
+                    cropH = vw * (3 / 4);
+                }
+                const startX = (vw - cropW) / 2;
+                const startY = (vh - cropH) / 2;
+
+                const tempCanvas = document.createElement('canvas');
+                tempCanvas.width = 320;
+                tempCanvas.height = 240;
+                const tempCtx = tempCanvas.getContext('2d');
+                
+                // DO NOT mirror image data. Let the backend process raw unmirrored sensor data.
+                tempCtx.drawImage(video, startX, startY, cropW, cropH, 0, 0, 320, 240);
+                
+                const imageSrc = tempCanvas.toDataURL('image/jpeg', 0.5);
+                if (imageSrc) {
+                    newImages.push(imageSrc);
                 const currentTotal = capturedImages.length + newImages.length;
                 setCaptureProgress((currentTotal / 20) * 100);
 
@@ -109,7 +132,8 @@ function RegistrationTab() {
                 setLiveLoss(newLoss.toFixed(4));
                 setLiveAcc(newAcc.toFixed(2));
             }
-            await new Promise(resolve => setTimeout(resolve, 300));
+            }
+            await new Promise(r => setTimeout(r, 400));
         }
 
         setCapturedImages(prev => [...prev, ...newImages]);

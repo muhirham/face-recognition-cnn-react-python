@@ -7,14 +7,22 @@ function AttendanceLogTab() {
     const [isLoading, setIsLoading] = useState(true);
     const [selectedImage, setSelectedImage] = useState(null);
 
+    const defaultMonth = new Date().toISOString().substring(0, 7); // YYYY-MM
+    const [selectedMonth, setSelectedMonth] = useState(defaultMonth);
+
     const [searchTerm, setSearchTerm] = useState('');
     const [currentPage, setCurrentPage] = useState(1);
     const [itemsPerPage, setItemsPerPage] = useState(10);
 
+
+
     useEffect(() => {
         const fetchHistory = async () => {
+            setIsLoading(true);
             try {
-                const res = await axios.get(`${API_BASE_URL}/admin/attendance_logs`);
+                const res = await axios.get(`${API_BASE_URL}/admin/attendance_logs`, {
+                    params: { month: selectedMonth }
+                });
                 setHistory(res.data.history || []);
             } catch (err) {
                 console.error("Gagal load history", err);
@@ -23,7 +31,7 @@ function AttendanceLogTab() {
             }
         };
         fetchHistory();
-    }, []);
+    }, [selectedMonth]);
 
     // Helper to format time for display
     const displayTime = (timeStr) => {
@@ -44,10 +52,41 @@ function AttendanceLogTab() {
         return <div style={{padding: '40px', fontWeight: '800'}}>Memuat Data Riwayat Absensi...</div>;
     }
 
-    const filteredHistory = history.filter(log => 
-        (log.nama && log.nama.toLowerCase().includes(searchTerm.toLowerCase())) ||
-        (log.tanggal && log.tanggal.includes(searchTerm)) ||
-        (log.status && log.status.toLowerCase().includes(searchTerm.toLowerCase()))
+    const groupedLogs = history.reduce((acc, log) => {
+        const key = `${log.nama}-${log.tanggal}`;
+        if (!acc[key]) {
+            acc[key] = {
+                id: key,
+                nama: log.nama,
+                kode_karyawan: log.kode_karyawan || '-',
+                nama_dept: log.nama_dept || 'Umum',
+                tanggal: log.tanggal,
+                masuk: null,
+                pulang: null,
+                searchStr: `${log.nama} ${log.kode_karyawan} ${log.nama_dept} ${log.tanggal}`.toLowerCase()
+            };
+        }
+        if (log.jenis === 'masuk') {
+            acc[key].masuk = log;
+            acc[key].searchStr += ` ${log.status}`;
+        }
+        if (log.jenis === 'pulang') {
+            acc[key].pulang = log;
+            acc[key].searchStr += ` ${log.status}`;
+        }
+        return acc;
+    }, {});
+
+    let combinedHistory = Object.values(groupedLogs);
+    combinedHistory.sort((a, b) => {
+        if (a.tanggal !== b.tanggal) {
+            return new Date(b.tanggal) - new Date(a.tanggal);
+        }
+        return a.nama.localeCompare(b.nama);
+    });
+
+    const filteredHistory = combinedHistory.filter(log => 
+        log.searchStr.includes(searchTerm.toLowerCase())
     );
     const totalPages = Math.ceil(filteredHistory.length / itemsPerPage) || 1;
     const currentHistory = filteredHistory.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
@@ -59,9 +98,19 @@ function AttendanceLogTab() {
                     <h2>Data Absensi (Riwayat)</h2>
                     <p>Log mendetail seluruh aktivitas absensi masuk dan keluar karyawan.</p>
                 </div>
-                <div style={{ display: 'flex', alignItems: 'center' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <span style={{ fontSize: '13px', fontWeight: '700', color: 'var(--slate-muted)' }}>BULAN:</span>
+                        <input 
+                            type="month"
+                            className="search-input"
+                            style={{ width: '150px' }}
+                            value={selectedMonth}
+                            onChange={e => { setSelectedMonth(e.target.value); setCurrentPage(1); }}
+                        />
+                    </div>
                     <input 
-                        type="text" className="search-input" placeholder="Cari nama, tanggal, status..." 
+                        type="text" className="search-input" placeholder="Cari nama, status..." 
                         value={searchTerm} onChange={e => {setSearchTerm(e.target.value); setCurrentPage(1);}} 
                         style={{ width: '250px' }}
                     />
@@ -73,55 +122,98 @@ function AttendanceLogTab() {
                     <table className="premium-admin-table">
                         <thead>
                             <tr>
-                                <th style={{ width: '80px' }}>Foto</th>
                                 <th>Nama Karyawan</th>
                                 <th>Tanggal</th>
-                                <th>Waktu</th>
-                                <th>Tipe</th>
-                                <th>Status</th>
-                                <th>Akurasi (%)</th>
+                                <th>Detail Masuk</th>
+                                <th>Detail Pulang</th>
                             </tr>
                         </thead>
                         <tbody>
                             {currentHistory.length > 0 ? (
                                 currentHistory.map((log) => (
                                     <tr key={log.id}>
-                                        <td data-label="Foto">
-                                            <div className="att-photo-circle">
-                                                {log.foto_absen ? (
-                                                    <img 
-                                                        src={`${API_BASE_URL}/static/attendance_photos/${log.foto_absen}`} 
-                                                        alt="Face" 
-                                                        onClick={() => setSelectedImage(`${API_BASE_URL}/static/attendance_photos/${log.foto_absen}`)}
-                                                        className="clickable-image"
-                                                    />
-                                                ) : (
-                                                    <span className="no-pic">?</span>
-                                                )}
+                                        <td data-label="Karyawan">
+                                            <div style={{fontWeight: '800', color: 'var(--navy-primary)'}}>{log.nama}</div>
+                                            <div style={{fontSize: '12px', color: 'var(--slate-muted)', marginTop: '2px', display: 'flex', gap: '8px'}}>
+                                                <span><i className="fas fa-id-badge" style={{color: '#cbd5e1'}}></i> {log.kode_karyawan}</span>
+                                                <span><i className="fas fa-building" style={{color: '#cbd5e1'}}></i> {log.nama_dept}</span>
                                             </div>
                                         </td>
-                                        <td data-label="Nama"><strong>{log.nama}</strong></td>
-                                        <td data-label="Tanggal">{log.tanggal}</td>
-                                        <td data-label="Waktu">{displayTime(log.waktu)}</td>
-                                        <td data-label="Tipe">{log.jenis ? log.jenis.toUpperCase() : '-'}</td>
-                                        <td data-label="Status">
-                                            <span className={`status-pill ${log.status}`}>
-                                                {log.status ? log.status.replace('_', ' ') : '-'}
-                                                {log.status === 'terlambat' && log.menit_terlambat > 0 && (
-                                                    <span className="late-duration"> ({formatDuration(log.menit_terlambat)})</span>
-                                                )}
-                                            </span>
+                                        <td data-label="Tanggal" style={{fontWeight: '600', color: 'var(--slate-muted)'}}>{log.tanggal}</td>
+                                        
+                                        <td data-label="Masuk">
+                                            {log.masuk ? (
+                                                <div style={{display: 'flex', gap: '12px', alignItems: 'flex-start'}}>
+                                                    <div className="att-photo-circle">
+                                                        {log.masuk.foto_absen ? (
+                                                            <img 
+                                                                src={`${API_BASE_URL}/static/attendance_photos/${log.masuk.foto_absen}`} 
+                                                                alt="Masuk" onClick={() => setSelectedImage(`${API_BASE_URL}/static/attendance_photos/${log.masuk.foto_absen}`)}
+                                                                className="clickable-image"
+                                                            />
+                                                        ) : <span className="no-pic">?</span>}
+                                                    </div>
+                                                    <div>
+                                                        <div style={{fontWeight: '800', color: 'var(--navy-primary)', fontSize: '15px'}}>
+                                                            {displayTime(log.masuk.waktu)}
+                                                        </div>
+                                                        <div style={{display: 'flex', alignItems: 'center', gap: '6px', marginTop: '4px'}}>
+                                                            <span className={`status-pill ${log.masuk.status}`}>
+                                                                {log.masuk.status.replace('_', ' ')}
+                                                                {log.masuk.status === 'terlambat' && log.masuk.menit_terlambat > 0 && ` (${formatDuration(log.masuk.menit_terlambat)})`}
+                                                            </span>
+                                                            <span className={`accuracy-val ${log.masuk.confidence_score < 75 ? 'low' : 'high'}`} style={{fontSize: '10px'}}>
+                                                                {Math.round(log.masuk.confidence_score)}%
+                                                            </span>
+                                                        </div>
+                                                        {log.masuk.alasan && (
+                                                            <div style={{fontSize: '11px', color: '#64748b', marginTop: '6px', fontStyle: 'italic', maxWidth: '200px', lineHeight: '1.4'}}>
+                                                                <i className="fas fa-comment-dots"></i> {log.masuk.alasan}
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                            ) : <div style={{color: '#94a3b8', fontStyle: 'italic'}}>Belum Absen Masuk</div>}
                                         </td>
-                                        <td data-label="Akurasi">
-                                            <span className={`accuracy-val ${log.confidence_score < 75 ? 'low' : 'high'}`}>
-                                                {log.confidence_score ? Math.round(log.confidence_score) : 0}%
-                                            </span>
+
+                                        <td data-label="Pulang">
+                                            {log.pulang ? (
+                                                <div style={{display: 'flex', gap: '12px', alignItems: 'flex-start'}}>
+                                                    <div className="att-photo-circle">
+                                                        {log.pulang.foto_absen ? (
+                                                            <img 
+                                                                src={`${API_BASE_URL}/static/attendance_photos/${log.pulang.foto_absen}`} 
+                                                                alt="Pulang" onClick={() => setSelectedImage(`${API_BASE_URL}/static/attendance_photos/${log.pulang.foto_absen}`)}
+                                                                className="clickable-image"
+                                                            />
+                                                        ) : <span className="no-pic">?</span>}
+                                                    </div>
+                                                    <div>
+                                                        <div style={{fontWeight: '800', color: 'var(--navy-primary)', fontSize: '15px'}}>
+                                                            {displayTime(log.pulang.waktu)}
+                                                        </div>
+                                                        <div style={{display: 'flex', alignItems: 'center', gap: '6px', marginTop: '4px'}}>
+                                                            <span className={`status-pill ${log.pulang.status}`}>
+                                                                {log.pulang.status.replace('_', ' ')}
+                                                            </span>
+                                                            <span className={`accuracy-val ${log.pulang.confidence_score < 75 ? 'low' : 'high'}`} style={{fontSize: '10px'}}>
+                                                                {Math.round(log.pulang.confidence_score)}%
+                                                            </span>
+                                                        </div>
+                                                        {log.pulang.alasan && (
+                                                            <div style={{fontSize: '11px', color: '#64748b', marginTop: '6px', fontStyle: 'italic', maxWidth: '200px', lineHeight: '1.4'}}>
+                                                                <i className="fas fa-comment-dots"></i> {log.pulang.alasan}
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                            ) : <div style={{color: '#94a3b8', fontStyle: 'italic'}}>Belum Absen Pulang</div>}
                                         </td>
                                     </tr>
                                 ))
                             ) : (
                                 <tr>
-                                    <td colSpan="7" className="empty-state">Belum ada data riwayat absensi yang sesuai.</td>
+                                    <td colSpan="4" className="empty-state">Belum ada data riwayat absensi yang sesuai.</td>
                                 </tr>
                             )}
                         </tbody>
@@ -208,6 +300,33 @@ function AttendanceLogTab() {
                 .status-pill.terlambat { background: #fee2e2; color: #991b1b; }
                 .status-pill.pulang_awal { background: #ffedd5; color: #d97706; }
                 .status-pill.lembur { background: #dbeafe; color: #2563eb; }
+                
+                /* Image Viewer Modal Styles */
+                .image-viewer-overlay {
+                    position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+                    background: rgba(15, 23, 42, 0.9); backdrop-filter: blur(5px);
+                    display: flex; align-items: center; justify-content: center; z-index: 3000;
+                    animation: fadeIn 0.2s;
+                }
+                .image-viewer-content {
+                    position: relative; max-width: 90%; max-height: 90vh;
+                    background: transparent; display: flex; align-items: center; justify-content: center;
+                }
+                .image-viewer-content img {
+                    max-width: 100%; max-height: 85vh; border-radius: 16px;
+                    box-shadow: 0 25px 50px rgba(0,0,0,0.5); object-fit: contain;
+                    border: 2px solid rgba(255,255,255,0.1);
+                }
+
+                .btn-close-viewer {
+                    position: absolute; top: -40px; right: 0;
+                    background: rgba(255,255,255,0.2); color: white; border: none;
+                    width: 32px; height: 32px; border-radius: 50%;
+                    font-size: 16px; font-weight: bold; cursor: pointer;
+                    display: flex; align-items: center; justify-content: center;
+                    transition: 0.2s;
+                }
+                .btn-close-viewer:hover { background: rgba(255,255,255,0.4); }
                 .status-pill.sakit { background: #e0f2fe; color: #075985; }
                 .status-pill.alfa { background: #fef2f2; color: #dc2626; border: 1px solid #fecaca; }
                 
@@ -225,34 +344,8 @@ function AttendanceLogTab() {
                 .att-photo-circle img { width: 100%; height: 100%; object-fit: cover; }
                 .att-photo-circle .no-pic { font-size: 14px; font-weight: 800; color: #cbd5e1; }
 
-                .clickable-image { cursor: pointer; transition: transform 0.2s; }
-                .clickable-image:hover { transform: scale(1.1); box-shadow: 0 4px 12px rgba(0,0,0,0.2); }
-
-                /* Image Viewer Modal Styles */
-                .image-viewer-overlay {
-                    position: fixed; top: 0; left: 0; right: 0; bottom: 0;
-                    background: rgba(15, 23, 42, 0.9); backdrop-filter: blur(5px);
-                    display: flex; align-items: center; justify-content: center; z-index: 3000;
-                    animation: fadeIn 0.2s;
-                }
-                .image-viewer-content {
-                    position: relative; max-width: 90%; max-height: 90vh;
-                    background: transparent; display: flex; align-items: center; justify-content: center;
-                }
-                .image-viewer-content img {
-                    max-width: 100%; max-height: 85vh; border-radius: 16px;
-                    box-shadow: 0 25px 50px rgba(0,0,0,0.5); object-fit: contain;
-                    border: 2px solid rgba(255,255,255,0.1);
-                }
-                .btn-close-viewer {
-                    position: absolute; top: -40px; right: 0;
-                    background: rgba(255,255,255,0.2); color: white; border: none;
-                    width: 32px; height: 32px; border-radius: 50%;
-                    font-size: 16px; font-weight: bold; cursor: pointer;
-                    display: flex; align-items: center; justify-content: center;
-                    transition: 0.2s;
-                }
-                .btn-close-viewer:hover { background: #ef4444; transform: scale(1.1); }
+                .clickable-image { transition: transform 0.2s; }
+                .clickable-image:hover { transform: scale(1.1); }
 
                 /* Pagination Container */
                 .pagination-container {

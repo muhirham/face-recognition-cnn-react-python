@@ -17,7 +17,7 @@ function Header({ onMenuClick, portalTitle, username, userRole, onLogout }) {
             </div>
 
             <div className="header-right-section">
-                <div className="user-greeting">
+                <div className="user-profile-header">
                     <span>Halo, <strong>{username}</strong> <span className="role-sub">({userRole})</span></span>
                 </div>
                 <button className="header-exit-btn" onClick={onLogout}>

@@ -1,4 +1,27 @@
 import React, { useEffect } from 'react';
+import {
+  Chart as ChartJS,
+  CategoryScale,
+  LinearScale,
+  PointElement,
+  LineElement,
+  Title,
+  Tooltip,
+  Filler,
+  Legend,
+} from 'chart.js';
+import { Line } from 'react-chartjs-2';
+
+ChartJS.register(
+  CategoryScale,
+  LinearScale,
+  PointElement,
+  LineElement,
+  Title,
+  Tooltip,
+  Filler,
+  Legend
+);
 
 function OverviewTab({ stats }) {
     // Lock scroll specifically for this tab to achieve the "Static" kiosk feel
@@ -22,8 +45,65 @@ function OverviewTab({ stats }) {
         { label: 'Kam', value: 0 }, { label: 'Jum', value: 0 }, { label: 'Sab', value: 0 }, { label: 'Min', value: 0 }
     ];
 
-    // Find max value for chart scaling
-    const maxVal = Math.max(...weeklyStats.map(s => s.value), 10);
+    const chartData = {
+        labels: weeklyStats.map(s => s.label),
+        datasets: [
+            {
+                fill: true,
+                label: 'Kehadiran',
+                data: weeklyStats.map(s => s.value),
+                borderColor: '#1e3a8a',
+                backgroundColor: (context) => {
+                    const ctx = context.chart.ctx;
+                    const gradient = ctx.createLinearGradient(0, 0, 0, 200);
+                    gradient.addColorStop(0, 'rgba(30, 58, 138, 0.4)');
+                    gradient.addColorStop(1, 'rgba(30, 58, 138, 0.0)');
+                    return gradient;
+                },
+                tension: 0.4,
+                borderWidth: 3,
+                pointRadius: 4,
+                pointBackgroundColor: '#1e3a8a',
+                pointHoverRadius: 6,
+            },
+        ],
+    };
+
+    const chartOptions = {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+            legend: { display: false },
+            tooltip: {
+                mode: 'index',
+                intersect: false,
+                backgroundColor: 'rgba(15, 23, 42, 0.9)',
+                titleFont: { size: 13 },
+                bodyFont: { size: 12 },
+                padding: 10,
+                cornerRadius: 8,
+                displayColors: false,
+            },
+        },
+        scales: {
+            x: {
+                grid: { display: false },
+                ticks: { font: { size: 11, weight: '600' }, color: '#64748b' },
+                border: { display: false }
+            },
+            y: {
+                beginAtZero: true,
+                grid: { color: '#f1f5f9' },
+                ticks: { font: { size: 11, weight: '600' }, color: '#64748b', precision: 0, stepSize: 1 },
+                border: { display: false }
+            }
+        },
+        interaction: {
+            mode: 'nearest',
+            axis: 'x',
+            intersect: false
+        }
+    };
 
     return (
         <div className="admin-overview-container animate-fade-in">
@@ -78,23 +158,8 @@ function OverviewTab({ stats }) {
             <div className="performance-row">
                 <div className="chart-container">
                     <p className="row-label">Grafik Kehadiran (7 Hari)</p>
-                    <div className="bar-chart-mock">
-                        <div className="bars">
-                            {weeklyStats.map((s, idx) => (
-                                <div 
-                                    key={idx} 
-                                    className={`bar-val ${idx === weeklyStats.length - 1 ? 'active' : ''}`} 
-                                    style={{ height: `${(s.value / maxVal) * 100}%` }}
-                                    title={`${s.value} Hadir`}
-                                ></div>
-                            ))}
-                        </div>
-                        <div className="trend-line"></div>
-                        <div className="chart-labels">
-                            {weeklyStats.map((s, idx) => (
-                                <span key={idx}>{s.label}</span>
-                            ))}
-                        </div>
+                    <div style={{ width: '100%', height: '180px', marginTop: '20px' }}>
+                        <Line data={chartData} options={chartOptions} />
                     </div>
                 </div>
 

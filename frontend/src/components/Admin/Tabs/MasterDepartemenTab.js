@@ -115,7 +115,7 @@ function MasterDepartemenTab() {
                             <button type="submit">Tambah</button>
                         </form>
                         <div className="mini-list-p">
-                            {currentDepartments.length > 0 ? currentDepartments.map(d => (
+                            {currentDepartments.length > 0 ? currentDepartments.map((d, index) => (
                                 <div key={d.id} className="list-item-p">
                                     {editId === d.id ? (
                                         <div style={{display: 'flex', gap: '8px', flex: 1}}>
@@ -131,7 +131,7 @@ function MasterDepartemenTab() {
                                         </div>
                                     ) : (
                                         <>
-                                            <span>{d.nama_dept}</span>
+                                            <span><strong style={{color: '#64748b', marginRight: '8px'}}>{(currentPage - 1) * itemsPerPage + index + 1}.</strong> {d.nama_dept}</span>
                                             <div className="action-btns-p">
                                                 <button onClick={() => handleEditClick(d)}>✏️</button>
                                                 <button onClick={() => confirmDelete(d)}>🗑️</button>

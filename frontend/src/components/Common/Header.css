@@ -69,6 +69,41 @@
     color: rgba(255, 255, 255, 0.7);
 }
 
+.header-notifications {
+    display: flex;
+    align-items: center;
+}
+
+.bell-btn {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    color: white;
+    width: 40px;
+    height: 40px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    position: relative;
+    transition: 0.3s;
+}
+
+.bell-btn:hover {
+    background: rgba(255, 255, 255, 0.15);
+}
+
+.bell-badge {
+    position: absolute;
+    top: 10px;
+    right: 12px;
+    width: 8px;
+    height: 8px;
+    background: #ef4444;
+    border-radius: 50%;
+    border: 2px solid var(--navy-primary);
+}
+
 .user-greeting strong {
     color: white;
     font-weight: 700;
@@ -104,7 +139,7 @@
 @media (max-width: 1024px) {
     .premium-header-container { height: 60px; padding: 0 20px; }
     .mobile-drawer-trigger { display: block; }
-    .node-divider, .user-greeting, .node-title { display: none; }
+    .node-divider, .user-profile-header, .node-title { display: none; }
     .header-exit-btn span { display: none; }
     .header-exit-btn { padding: 10px; border-radius: 50%; }
 }

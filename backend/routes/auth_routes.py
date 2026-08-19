@@ -14,10 +14,28 @@ def login_credential():
     try:
         data = request.get_json()
         email, password = data.get('email'), data.get('password')
-        cursor.execute("SELECT id, username, role, password_hash FROM users WHERE email = %s", (email,))
+        cursor.execute("""
+            SELECT u.id, u.username, u.role, u.password_hash,
+                   k.nama as nama_karyawan, k.jabatan as jabatan_karyawan, k.status_kerja
+            FROM users u
+            LEFT JOIN karyawans k ON u.id = k.user_id
+            WHERE u.email = %s
+        """, (email,))
         user = cursor.fetchone()
-        if user and user['password_hash'] == password:
-            return jsonify({'message': 'Login Success', 'user_id': user['id'], 'username': user['username'], 'role': user['role']})
+        
+        if user:
+            if user.get('status_kerja') == 'non-aktif':
+                return jsonify({'message': 'Akun Anda telah dinonaktifkan. Silakan hubungi Administrator.'}), 403
+                
+            if user['password_hash'] == password:
+                return jsonify({
+                    'message': 'Login Success', 
+                    'user_id': user['id'], 
+                    'username': user['username'], 
+                    'role': user['role'],
+                    'nama_karyawan': user['nama_karyawan'] or user['username'],
+                    'jabatan_karyawan': user['jabatan_karyawan'] or 'Administrator'
+                })
         return jsonify({'message': 'Invalid credentials'}), 401
     finally:
         cursor.close()
@@ -36,6 +54,7 @@ def register():
         dept_id = data.get('dept_id') if data.get('dept_id') else None
         jabatan_str = data.get('jabatan', '')
         role = data.get('role', 'karyawan')
+        status_kerja = data.get('status_kerja', 'aktif')
         
         if not email or not username:
             return jsonify({'message': 'Nama dan Email wajib diisi!'}), 400
@@ -52,9 +71,9 @@ def register():
         
         kode_kry = 'EMP' + ''.join(random.choices(string.digits, k=5))
         cursor.execute("""
-            INSERT INTO karyawans (user_id, dept_id, jabatan, kode_karyawan, nama, nomor_hp) 
-            VALUES (%s, %s, %s, %s, %s, %s)
-        """, (user_id, dept_id, jabatan_str, kode_kry, username, data.get('nomor_hp', '-')))
+            INSERT INTO karyawans (user_id, dept_id, jabatan, kode_karyawan, nama, nomor_hp, status_kerja) 
+            VALUES (%s, %s, %s, %s, %s, %s, %s)
+        """, (user_id, dept_id, jabatan_str, kode_kry, username, data.get('nomor_hp', '-'), status_kerja))
         
         conn.commit()
         return jsonify({

@@ -1,7 +1,8 @@
 .layout-wrapper {
     display: flex;
     height: 100vh;
-    width: 100%;
+    width: 100vw;
+    max-width: 100%;
     overflow: hidden;
 }
 
@@ -15,12 +16,12 @@
 
 .layout-view-area {
     flex: 1;
-    padding: 32px;
-    overflow-y: auto;
+    padding: 24px;
+    overflow: hidden;
     width: 100%;
     display: flex;
     flex-direction: column;
-    gap: 24px;
+    box-sizing: border-box;
 }
 
 /* Scrollbar Styling for View Area */
@@ -41,9 +42,37 @@
     background: rgba(0, 0, 0, 0.2);
 }
 
+.mobile-bottom-nav {
+    display: none;
+}
+
 @media (max-width: 768px) {
     .layout-view-area {
         padding: 16px;
-        gap: 16px;
+        display: block;
+        overflow-y: auto;
+        overflow-x: hidden;
+    }
+    
+    .nav-btn {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 4px;
+        background: none;
+        border: none;
+        color: #94a3b8;
+        font-size: 11px;
+        font-weight: 700;
+        cursor: pointer;
+        transition: 0.3s;
+    }
+
+    .nav-btn.active {
+        color: var(--gold-accent);
+    }
+    
+    .nav-btn.active svg {
+        color: var(--gold-accent);
     }
 }

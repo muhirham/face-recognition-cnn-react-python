@@ -1,23 +1,39 @@
 from flask import Blueprint, request, jsonify
-from utils import get_db_connection, get_wib_time
+from utils import get_db_connection, get_wib_time, save_attendance_photo
 from datetime import datetime
 import os
 import shutil
 import traceback
+import random
 
 admin_bp = Blueprint('admin', __name__)
 
 @admin_bp.route('/admin/attendance_logs', methods=['GET'])
 def get_all_attendance_logs():
+    month_filter = request.args.get('month')
     conn = get_db_connection()
     cursor = conn.cursor(dictionary=True)
     try:
-        cursor.execute("""
-            SELECT a.id, k.nama, a.tanggal, a.waktu, a.jenis, a.status, a.menit_terlambat, a.confidence_score, a.foto_absen
+        query = """
+            SELECT a.id, k.nama, k.kode_karyawan, d.nama_dept, a.tanggal, a.waktu, a.jenis, a.status, a.menit_terlambat, a.alasan, a.confidence_score, a.foto_absen
             FROM absensis a
             JOIN karyawans k ON a.karyawan_id = k.id
-            ORDER BY a.tanggal DESC, a.waktu DESC
-        """)
+            LEFT JOIN departemens d ON k.dept_id = d.id
+        """
+        params = ()
+        if month_filter:
+            try:
+                import calendar
+                y, m = map(int, month_filter.split('-'))
+                last_day = calendar.monthrange(y, m)[1]
+                query += " WHERE a.tanggal BETWEEN %s AND %s"
+                params = (f"{y}-{m:02d}-01", f"{y}-{m:02d}-{last_day}")
+            except:
+                pass
+            
+        query += " ORDER BY a.tanggal DESC, a.waktu DESC"
+        
+        cursor.execute(query, params)
         raw_logs = cursor.fetchall()
         formatted_logs = []
         for row in raw_logs:
@@ -44,12 +60,58 @@ def get_admin_stats():
         cursor.execute("SELECT COUNT(*) as total FROM absensis WHERE tanggal = %s AND status = 'terlambat'", (today,))
         late = cursor.fetchone()['total']
         
+        # 1. Fetch Recent History (Last 5 records today)
+        cursor.execute("""
+            SELECT k.nama, a.tanggal, a.waktu, a.jenis, a.status 
+            FROM absensis a
+            JOIN karyawans k ON a.karyawan_id = k.id
+            ORDER BY a.tanggal DESC, a.waktu DESC
+            LIMIT 5
+        """)
+        recent_raw = cursor.fetchall()
+        recent_history = []
+        for r in recent_raw:
+            recent_history.append({
+                'nama': r['nama'],
+                'tanggal': r['tanggal'].strftime('%Y-%m-%d'),
+                'waktu': str(r['waktu']),
+                'jenis': r['jenis'],
+                'status': r['status']
+            })
+            
+        # 2. Fetch Weekly Stats (Last 7 days attendance)
+        weekly_stats = []
+        from datetime import timedelta
+        for i in range(6, -1, -1):
+            target_date = (get_wib_time() - timedelta(days=i))
+            d_str = target_date.strftime('%Y-%m-%d')
+            label = target_date.strftime('%a') # Mon, Tue, etc
+            # Translate label manually since locale might vary
+            day_map = {'Mon': 'Sen', 'Tue': 'Sel', 'Wed': 'Rab', 'Thu': 'Kam', 'Fri': 'Jum', 'Sat': 'Sab', 'Sun': 'Min'}
+            label = day_map.get(label, label)
+            
+            cursor.execute("SELECT COUNT(DISTINCT karyawan_id) as c FROM absensis WHERE tanggal = %s", (d_str,))
+            count = cursor.fetchone()['c']
+            weekly_stats.append({'label': label, 'value': count})
+            
+        # 3. Notifications (Dummy or actual)
+        notifications = []
+        if late > 0:
+            notifications.append({'text': f"Ada {late} karyawan terlambat hari ini.", 'priority': True})
+        if total - present > 0:
+            notifications.append({'text': f"Ada {total - present} karyawan tidak hadir hari ini.", 'priority': False})
+        if not notifications:
+            notifications.append({'text': "Semua karyawan hadir tepat waktu hari ini!", 'priority': False})
+
         return jsonify({
             'total_employees': total,
             'present_today': present,
             'late_today': late,
             'absent_today': max(0, total - present),
-            'attendance_rate': round((present/total*100),1) if total > 0 else 0
+            'attendance_rate': round((present/total*100),1) if total > 0 else 0,
+            'recent_history': recent_history,
+            'weekly_stats': weekly_stats,
+            'notifications': notifications
         })
     finally:
         cursor.close()
@@ -70,15 +132,27 @@ def get_employees():
                 u.role, 
                 k.kode_karyawan, 
                 k.nomor_hp,
+                k.status_kerja,
                 k.dept_id,
                 k.jabatan,
                 d.nama_dept, 
-                (SELECT COUNT(*) FROM face_templates ft WHERE ft.karyawan_id = k.id AND ft.status = 'aktif') as has_template
+                (SELECT COUNT(*) FROM face_templates ft WHERE ft.karyawan_id = k.id AND ft.status = 'aktif') as has_template,
+                s.jam_masuk,
+                s.jam_pulang,
+                s.toleransi_menit
             FROM users u
             JOIN karyawans k ON u.id = k.user_id
             LEFT JOIN departemens d ON k.dept_id = d.id
+            LEFT JOIN shift_kerjas s ON k.dept_id = s.dept_id
         """)
-        return jsonify({'employees': cursor.fetchall()})
+        
+        employees = []
+        for row in cursor.fetchall():
+            row['jam_masuk'] = str(row['jam_masuk']) if row['jam_masuk'] else '08:00:00'
+            row['jam_pulang'] = str(row['jam_pulang']) if row['jam_pulang'] else '17:00:00'
+            employees.append(row)
+            
+        return jsonify({'employees': employees})
     finally:
         cursor.close()
         conn.close()
@@ -107,8 +181,8 @@ def manage_employee(user_id):
                 """, (data['username'], data['email'], data['role'], user_id))
             
             cursor.execute("""
-                UPDATE karyawans SET dept_id = %s, jabatan = %s, nama = %s, nomor_hp = %s WHERE user_id = %s
-            """, (data['dept_id'], data['jabatan'], data['username'], data.get('nomor_hp', '-'), user_id))
+                UPDATE karyawans SET dept_id = %s, jabatan = %s, nama = %s, nomor_hp = %s, status_kerja = %s WHERE user_id = %s
+            """, (data['dept_id'], data['jabatan'], data['username'], data.get('nomor_hp', '-'), data.get('status_kerja', 'aktif'), user_id))
             
             conn.commit()
             return jsonify({'message': 'Data berhasil diperbarui'})
@@ -182,6 +256,83 @@ def get_report():
             GROUP BY k.id
         """)
         return jsonify({'report': cursor.fetchall()})
+    finally:
+        cursor.close()
+        conn.close()
+
+@admin_bp.route('/admin/batch-inject-attendance', methods=['POST'])
+def batch_inject_attendance():
+    data = request.get_json()
+    records = data.get('records', [])
+    
+    if not records:
+        return jsonify({'message': 'Tidak ada data untuk diinjeksi!'}), 400
+        
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    try:
+        inserted_count = 0
+        for rec in records:
+            karyawan_id = rec.get('karyawan_id')
+            tanggal = rec.get('tanggal')
+            waktu = rec.get('waktu')
+            jenis = rec.get('jenis')
+            status = rec.get('status')
+            foto_b64 = rec.get('foto_b64')
+            menit_terlambat = rec.get('menit_terlambat', 0)
+            alasan = rec.get('alasan', '')
+            
+            if not all([karyawan_id, tanggal, waktu, jenis, status]):
+                continue # skip incomplete records
+            
+            # Save photo if provided
+            photo_name = None
+            if foto_b64:
+                try:
+                    photo_name = save_attendance_photo(foto_b64, karyawan_id)
+                except Exception as e:
+                    print(f"Error saving photo: {e}")
+                    photo_name = "manual_inject"
+            else:
+                photo_name = "manual_inject"
+                
+            cursor.execute("SELECT s.id FROM shift_kerjas s JOIN karyawans k ON s.dept_id = k.dept_id WHERE k.id = %s", (karyawan_id,))
+            emp = cursor.fetchone()
+            shift_id = emp[0] if emp else None
+            
+            # Generate random confidence score between 87.0 and 97.0
+            random_confidence = round(random.uniform(87.0, 97.0), 2)
+            
+            # Check if record already exists since there is no UNIQUE constraint
+            cursor.execute("""
+                SELECT id FROM absensis 
+                WHERE karyawan_id = %s AND tanggal = %s AND jenis = %s
+                ORDER BY id ASC LIMIT 1
+            """, (karyawan_id, tanggal, jenis))
+            
+            existing = cursor.fetchone()
+            
+            if existing:
+                # Update existing record
+                cursor.execute("""
+                    UPDATE absensis 
+                    SET waktu=%s, status=%s, confidence_score=%s, foto_absen=%s, menit_terlambat=%s, alasan=%s
+                    WHERE id = %s
+                """, (waktu, status, random_confidence, photo_name, menit_terlambat, alasan, existing[0]))
+            else:
+                # Insert new record
+                cursor.execute("""
+                    INSERT INTO absensis (karyawan_id, shift_id, tanggal, waktu, jenis, status, confidence_score, foto_absen, menit_terlambat, alasan)
+                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                """, (karyawan_id, shift_id, tanggal, waktu, jenis, status, random_confidence, photo_name, menit_terlambat, alasan))
+                
+            inserted_count += 1
+            
+        conn.commit()
+        return jsonify({'message': f'Berhasil menginjeksi {inserted_count} record absensi.'})
+    except Exception as e:
+        conn.rollback()
+        return jsonify({'message': f'Gagal: {str(e)}'}), 500
     finally:
         cursor.close()
         conn.close()

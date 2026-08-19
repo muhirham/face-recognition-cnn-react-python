@@ -27,6 +27,7 @@ import RegistrationTab from './Tabs/RegistrationTab';
 import ScheduleTab from './Tabs/ScheduleTab';
 import HolidayTab from './Tabs/HolidayTab';
 import AttendanceLogTab from './Tabs/AttendanceLogTab';
+import InjectDataTab from './Tabs/InjectDataTab';
 import SettingsTab from './Tabs/SettingsTab';
 import ReportsTab from './Tabs/ReportsTab';
 
@@ -85,6 +86,7 @@ function AdminDashboard() {
             ]
         },
         { id: 'registration', label: 'Pendaftaran Wajah', icon: <IconWebcam /> },
+        { id: 'inject_data', label: 'Inject Data Sistem', icon: <IconDatabase /> },
         { 
             id: 'reports_group', 
             label: 'Laporan', 
@@ -119,8 +121,9 @@ function AdminDashboard() {
             {activeTab === 'master_dataset' && <MasterDatasetTab />}
             {activeTab === 'schedule' && <ScheduleTab />}
             {activeTab === 'master_holidays' && <HolidayTab />}
-            {activeTab === 'registration' && <RegistrationTab />}
-            {activeTab === 'report_daily' && <ReportsTab reportType="daily" />}
+            { activeTab === 'registration' && <RegistrationTab /> }
+            { activeTab === 'inject_data' && <InjectDataTab /> }
+            { activeTab === 'report_daily' && <ReportsTab reportType="daily" /> }
             {activeTab === 'report_monthly' && <ReportsTab reportType="monthly" />}
             {activeTab === 'report_late' && <ReportsTab reportType="late" />}
             {activeTab === 'report_early' && <ReportsTab reportType="early" />}

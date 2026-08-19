@@ -19,6 +19,7 @@ function UserDashboard() {
     const [username, setUsername] = useState('');
     const [activeTab, setActiveTab] = useState('welcome');
     const [history, setHistory] = useState([]);
+    const [selectedMonth, setSelectedMonth] = useState(new Date().toISOString().substring(0, 7)); // YYYY-MM
     const [attendanceStatus, setAttendanceStatus] = useState({ masuk: false, pulang: false });
     const [todaySchedule, setTodaySchedule] = useState(null);
     const [holiday, setHoliday] = useState(null);
@@ -50,7 +51,7 @@ function UserDashboard() {
         if (!userId) return;
         try {
             const response = await axios.get(`${API_BASE_URL}/attendance_history`, {
-                params: { user_id: userId }
+                params: { user_id: userId } // Fetch all history once, no N+1
             });
             const logs = response.data.history;
             setHistory(logs);
@@ -116,13 +117,14 @@ function UserDashboard() {
             const name = face.name;
             const confidence = face.confidence;
 
-            // We sent a 320x240 image to backend to speed up processing, 
-            // but our canvas is 640x480. So we multiply coordinates by 2.
-            const scale = 2;
-            const x = left * scale;
-            const y = top * scale;
-            const w = (right - left) * scale;
-            const h = (bottom - top) * scale;
+            // The backend already scaled the coordinates up to the 640x480 coordinate space.
+            // Since we send UNMIRRORED images to the backend, but the video element 
+            // is visually MIRRORED to the user (via CSS), we MUST flip the X coordinates!
+            const BACKEND_W = 640;
+            const x = BACKEND_W - right; // Flipped X
+            const y = top;
+            const w = (right - left);
+            const h = (bottom - top);
 
             // Bounding box with glow
             ctx.strokeStyle = name === 'Unknown' ? '#ef4444' : '#f9bc2f';
@@ -266,13 +268,39 @@ function UserDashboard() {
         const video = webcamRef.current.video;
         if (!video || video.readyState < 2) return;
 
-        // Downscale to 320x240 (4x smaller area) so backend HOG detection runs much faster 
-        // and base64 upload payload is tiny.
-        const imageSrc = webcamRef.current.getScreenshot({ width: 320, height: 240 });
+        const vw = video.videoWidth;
+        const vh = video.videoHeight;
+        
+        // Custom CROP logic to match object-fit: cover with 4:3 aspect ratio
+        let cropW = vw;
+        let cropH = vh;
+        if (vw / vh > 4 / 3) {
+            cropW = vh * (4 / 3);
+        } else {
+            cropH = vw * (3 / 4);
+        }
+        
+        const startX = (vw - cropW) / 2;
+        const startY = (vh - cropH) / 2;
+
+        const tempCanvas = document.createElement('canvas');
+        tempCanvas.width = 320;
+        tempCanvas.height = 240;
+        const tempCtx = tempCanvas.getContext('2d');
+        
+        // DO NOT mirror the image data here! Doing so messes up face recognition 
+        // if the templates were registered unmirrored or lighting is asymmetric.
+        tempCtx.drawImage(video, startX, startY, cropW, cropH, 0, 0, 320, 240);
+        const imageSrc = tempCanvas.toDataURL('image/jpeg', 0.5);
         if (!imageSrc) return;
 
+        const userId = getCookie('user_id');
+
         try {
-            const response = await axios.post(`${API_BASE_URL}/detect_live`, { image: imageSrc });
+            const response = await axios.post(`${API_BASE_URL}/detect_live`, { 
+                image: imageSrc,
+                user_id: userId
+            });
             
             // Check state again after await to drop stale responses if modal opened
             if (activeTab !== 'absen' || reasonModal.isOpen) return;
@@ -426,6 +454,7 @@ function UserDashboard() {
                     history={history}
                     holiday={holiday}
                     onGoToAbsen={() => setActiveTab('absen')}
+                    onGoToHistory={() => setActiveTab('history')}
                 />
             )}
             {activeTab === 'absen' && (
@@ -444,7 +473,7 @@ function UserDashboard() {
                 />
             )}
             {activeTab === 'history' && (
-                <HistoryTab history={history} />
+                <HistoryTab history={history} selectedMonth={selectedMonth} setSelectedMonth={setSelectedMonth} />
             )}
             
             {reasonModal.isOpen && (
