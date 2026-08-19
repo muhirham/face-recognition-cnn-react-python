@@ -48,16 +48,29 @@ Facial_Login_System/
 2. Buat database dengan nama `absensi_cnn`.
 3. Sesuaikan *username* dan *password* di file `backend/config.py`.
 
-### 2. Setup Backend (Python)
+### 2. Setup Backend (Python & Virtual Environment)
+Sangat disarankan menggunakan Virtual Environment (venv) saat memindahkan program ke laptop lain agar versi library (terutama dlib dan face_recognition) tidak bentrok.
+
 ```bash
 cd backend
-# Instal library yang dibutuhkan
+
+# 1. Buat virtual environment bernama 'venv'
+python -m venv venv
+
+# 2. Aktifkan venv (Windows)
+venv\Scripts\activate
+# (Catatan: Jika menggunakan Mac/Linux, jalankan: source venv/bin/activate)
+
+# 3. Instal semua library yang dibutuhkan (pastikan (venv) sudah muncul di terminal)
 pip install -r requirements.txt
 
-# Jika butuh instal dlib secara manual (Windows):
+# 4. Jika gagal menginstal dlib, instal secara manual menggunakan file wheel yang sudah disediakan (khusus Windows Python 3.11):
 pip install dlib-19.24.1-cp311-cp311-win_amd64.whl
 
-# Jalankan server
+# 5. Inisialisasi Database (Buat Tabel & Akun Admin Default) - WAJIB DIJALANKAN PERTAMA KALI
+python init_db.py
+
+# 6. Jalankan server backend
 python main.py
 ```
 
@@ -67,9 +80,14 @@ cd frontend
 # Instal dependensi
 npm install
 
-# Jalankan aplikasi
+# Jalankan aplikasi (Development mode)
 npm start
 ```
+
+### 4. Akses Akun Administrator (Default)
+Setelah aplikasi berjalan, buka browser dan akses `http://localhost:3000`. Gunakan kredensial berikut untuk login pertama kali:
+- **Email:** `admin@gmail.com`
+- **Password:** `admin123`
 
 ---
 

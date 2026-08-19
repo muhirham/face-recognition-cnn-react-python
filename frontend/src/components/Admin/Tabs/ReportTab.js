@@ -45,6 +45,7 @@ function ReportTab() {
 
     useEffect(() => {
         fetchSummary();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
     const departments = ['Semua', ...new Set(summary.map(s => s.departemen).filter(d => d && d !== '-'))];
