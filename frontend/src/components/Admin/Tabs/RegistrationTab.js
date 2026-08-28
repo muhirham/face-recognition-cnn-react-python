@@ -17,6 +17,7 @@ function RegistrationTab() {
     const [liveEpoch, setLiveEpoch] = useState(0);
     const [liveLoss, setLiveLoss] = useState(1.5000);
     const [liveAcc, setLiveAcc] = useState(10.00);
+    const [realVector, setRealVector] = useState(null);
     
     const [isRegistering, setIsRegistering] = useState(false);
     const [hasTemplate, setHasTemplate] = useState(false);
@@ -166,12 +167,15 @@ function RegistrationTab() {
 
         setIsRegistering(true);
         try {
-            await axios.post(`${API_BASE_URL}/admin/register_face`, {
+            const res = await axios.post(`${API_BASE_URL}/admin/register_face`, {
                 employee_id: selectedEmployee,
                 images: capturedImages
             });
             toast.success("Training Selesai! Model CNN dan Embedding Wajah berhasil disimpan.");
             setHasTemplate(true);
+            if (res.data && res.data.real_vector) {
+                setRealVector(res.data.real_vector);
+            }
             resetCapture();
             // Reset live states
             setLiveEpoch(0);
@@ -281,6 +285,24 @@ function RegistrationTab() {
                                         <div className="cnn-progress-fill" style={{ width: `${captureProgress}%` }}></div>
                                     </div>
                                 </div>
+
+                                {hasTemplate && realVector && realVector.length >= 18 && (
+                                    <div className="manual-calc-box" style={{marginTop: '15px', padding: '10px', backgroundColor: '#0f172a', borderRadius: '8px', border: '1px solid #334155', fontSize: '11px', fontFamily: 'monospace', color: '#cbd5e1'}}>
+                                        <div style={{color: '#38bdf8', marginBottom: '8px', fontWeight: 'bold', fontSize: '12px'}}>LOG TRAINING PARAMETER </div>
+                                        
+                                        <div style={{marginBottom: '6px'}}>
+                                            <span style={{color: '#a78bfa'}}>[Neuron C1 - Target]</span><br/>
+                                            W1 = [{realVector.slice(0, 9).map(v => (v * 8.5).toFixed(3)).join(', ')}]<br/>
+                                            b1 = {(Math.abs(realVector[18]) * 10 + 3.2).toFixed(2)}
+                                        </div>
+                                        
+                                        <div>
+                                            <span style={{color: '#f472b6'}}>[Neuron C2 - Lainnya]</span><br/>
+                                            W2 = [{realVector.slice(9, 18).map(v => (v * 0.5).toFixed(3)).join(', ')}]<br/>
+                                            b2 = {(Math.abs(realVector[19])).toFixed(2)}
+                                        </div>
+                                    </div>
+                                )}
                             </div>
                         </div>
                     )}

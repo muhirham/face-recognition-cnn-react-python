@@ -86,7 +86,7 @@ function AdminDashboard() {
             ]
         },
         { id: 'registration', label: 'Pendaftaran Wajah', icon: <IconWebcam /> },
-        { id: 'inject_data', label: 'Inject Data Sistem', icon: <IconDatabase /> },
+        //{ id: 'inject_data', label: 'Inject Data Sistem', icon: <IconDatabase /> },
         { 
             id: 'reports_group', 
             label: 'Laporan', 

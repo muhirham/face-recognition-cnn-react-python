@@ -54,7 +54,8 @@ def register_face():
                 encoding = get_face_encodings(img)
                 
                 if encoding is not None:
-                    vector_json = json.dumps(encoding.tolist())
+                    last_encoding = encoding.tolist()
+                    vector_json = json.dumps(last_encoding)
                     cursor.execute("""
                         INSERT INTO face_templates (karyawan_id, embedding_vector, status) 
                         VALUES (%s, %s, 'aktif')
@@ -75,7 +76,8 @@ def register_face():
         load_face_cache()
         return jsonify({
             'message': f'Berhasil! {saved_count} Vektor berhasil disimpan di Database',
-            'folder': folder_name
+            'folder': folder_name,
+            'real_vector': last_encoding if 'last_encoding' in locals() else None
         })
     except Exception as e:
         if conn: conn.rollback()
